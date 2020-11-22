@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - lines - fat</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="http://localhost:8080/three/examples/main.css">
+	</head>
+
+	<body>
+
+		<div id="container"></div>
+
+		<div id="info"><a href="https://threejs.org" target="_blank">three.js</a> - fat lines</div>
+
+		<!-- 官方虚线实例，使用的是希尔伯特曲线
+		<script type="module" src="line_flat.js"></script> -->
+		<!-- 网络示例：自定义材质 -->
+		<!-- <script type="module" src="customMateria.js"></script> -->
+		<!-- 实现虚线流动效果 -->
+		<!-- <script type="module" src="line_dashed_flow.js"></script> -->
+		<!-- GeoJSON流动效果 -->
+		
+		<!-- <script type="module">
+			import * as THREE from "http://localhost:8080/three/build/three.module.js";
+			import { OrbitControls } from "http://localhost:8080/three/examples/jsm/controls/OrbitControls.js";
+			import Stats from "http://localhost:8080/three/examples/jsm/libs/stats.module.js";
+			import { GeometryUtils } from "http://localhost:8080/three/examples/jsm/utils/GeometryUtils.js";
+		</script> -->
+		<script src="http://localhost:8080/three/build/three.js"></script>
+		<script src="../plugins/d3.js"></script>
+		<script src="../plugins/jquery-1.11.1.min.js"></script>
+		<script src="geo_dashed_flow.js"></script>
+		<script id="fragmentShader_lineDashed" type="x-shader/x-fragmentShader">
+			//自定义
+			varying vec3 v_customColor;
+			uniform float customOffset;
+			
+			
+			
+			
+			
+			
+			
+			uniform vec3 diffuse;
+			uniform float opacity;
+
+			uniform float dashSize;
+			uniform float totalSize;
+
+			varying float vLineDistance;
+
+			#include <common>
+			#include <color_pars_fragment>
+			#include <fog_pars_fragment>
+			#include <logdepthbuf_pars_fragment>
+			#include <clipping_planes_pars_fragment>
+
+			void main() {
+
+				#include <clipping_planes_fragment>
+				
+				if ( mod( vLineDistance + customOffset, totalSize ) > dashSize ) {
+
+					discard;
+
+				}
+
+				vec3 outgoingLight = vec3( 0.0 );
+				vec4 diffuseColor = vec4( diffuse, opacity );
+
+				#include <logdepthbuf_fragment>
+				#include <color_fragment>
+
+				outgoingLight = diffuseColor.rgb; // simple shader
+
+				gl_FragColor = vec4( outgoingLight, diffuseColor.a );
+				//自定义
+				gl_FragColor = vec4(v_customColor, 1.0);
+				#include <tonemapping_fragment>
+				#include <encodings_fragment>
+				#include <fog_fragment>
+				#include <premultiplied_alpha_fragment>
+
+			}
+		</script>
+		<script id="vertexShader_lineDashed" type="x-shader/x-vertexShader">
+			//自定义
+			uniform vec3 customColor;
+			varying vec3 v_customColor;
+			
+			
+			uniform float scale;
+			attribute float lineDistance;
+
+			varying float vLineDistance;
+
+			#include <common>
+			#include <color_pars_vertex>
+			#include <fog_pars_vertex>
+			#include <morphtarget_pars_vertex>
+			#include <logdepthbuf_pars_vertex>
+			#include <clipping_planes_pars_vertex>
+
+			void main() {
+				//自定义
+				v_customColor = customColor;
+
+
+
+				vLineDistance = scale * lineDistance;
+
+				#include <color_vertex>
+				#include <begin_vertex>
+				#include <morphtarget_vertex>
+				#include <project_vertex>
+				#include <logdepthbuf_vertex>
+				#include <clipping_planes_vertex>
+				#include <fog_vertex>
+			}
+		</script>
+		<script id="fragmentShader" type="text/shaderShader-linedashed_frag">
+			
+		</script>
+		<script id="vertexShader" type="text/vertexShader-linedashed_vert">
+			
+		</script>
+	</body>
+	
+</html>
