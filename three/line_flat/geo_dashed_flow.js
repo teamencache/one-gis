@@ -10,42 +10,94 @@ var customMateria, customUniforms;
 var WIDTH = window.innerWidth,
   HEIGHT = window.innerHeight;
 
+getJsonData("ArcgisJSON");
 
-$.getJSON('../data/AllProvinces.json',function (data) { 
+function getJsonData(type) {
+  var url;
+  switch (type) {
+    case "GeoJSON":
+      url = "../data/AllProvinces.json";
+      $.getJSON(url, geoJsonHandler);
+      break;
+    case "ArcgisJSON":
+      url = "../data/water_SNST.json";
+      $.getJSON(url, arcgisJsonHandler);
+      break;
+  }
+}
 
-    let root = data;
-    let padding = 0;
-    let xjRings =null;
-    for(let i=0; i<data.features.length; i++){
-        let feature = data.features[i];
-        if(feature.properties.name=='新疆维吾尔自治区'){
-            xjRings = feature.geometry.coordinates[0][0];
-            break;
-        }
+function geoJsonHandler(data) {
+  let xjRings = null;
+  let feature = null;
+  for (let i = 0; i < data.features.length; i++) {
+    feature = data.features[i];
+    if (feature.properties.name == "新疆维吾尔自治区") {
+      xjRings = feature.geometry.coordinates[0][0];
+      break;
     }
-    //设置投影
-    let projection = d3.geoMercator()
-    projection.fitExtent([[padding,padding],[WIDTH-padding*2,HEIGHT-padding*2]],root);
-    projection.fitSize([WIDTH,HEIGHT],root);
-    
-    let mercatorRings=[];
-    let z = 1;
-    for(let i=0,len=xjRings.length; i<len; i++){
-        let coord = xjRings[i];
-        let newCoord = projection(coord);
-        mercatorRings.push(newCoord[0]);
-        mercatorRings.push(newCoord[1]);
-        mercatorRings.push(z);
-    }
+  }
+  //设置投影
+  let projection = d3
+    .geoMercator()
+    .center([86.161412, 41.662478])
+    .scale(1200)
+    .translate([0, 0]);
 
-    init(mercatorRings);
-    animate();
-}); 
+  let mercatorRings = [];
+  let z = 1;
+  for (let i = 0, len = xjRings.length; i < len; i++) {
+    let coord = xjRings[i];
+    let newCoord = projection(coord);
+    mercatorRings.push(newCoord[0]);
+    mercatorRings.push(-newCoord[1]);
+    mercatorRings.push(z);
+  }
+
+  init(mercatorRings);
+  animate();
+}
+
+function arcgisJsonHandler(data) {
+  let xjRings = null;
+  let feature = null;
+  for (let i = 0; i < data.features.length; i++) {
+    feature = data.features[i];
+    if (feature.attributes.NAME == "京杭运河") {
+      xjRings = feature.geometry.rings[0];
+      break;
+    }
+  }
+  //设置投影
+  let projection = d3
+    .geoMercator()
+    .center([120.04314, 31.73057])
+    .scale(100000)
+    .translate([0, 0]);
+
+  let mercatorRings = [];
+  let z = 1;
+  for (let i = 0, len = xjRings.length/2; i < len; i++) {
+    let coord = xjRings[i];
+    let newCoord = projection(coord);
+    mercatorRings.push(newCoord[0]);
+    mercatorRings.push(-newCoord[1]);
+    mercatorRings.push(z);
+  }
+  // console.log(mercatorRings);
+  /*
+  0: -450.3640620528313
+  1: 291.9001123656926
+
+  1686:-450.3640620528313
+  1687: 291.9001123656926
+  */
+  init(mercatorRings);
+  animate();
+}
 
 function init(arrPostion) {
   camera = new THREE.PerspectiveCamera(75, WIDTH / HEIGHT, 1, 1000);
   camera.position.z = 800;
-//   camera.lookAt(new THREE.Vector3(400,300,0));
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xdddddd);
@@ -61,9 +113,9 @@ function init(arrPostion) {
     customColor: { value: new THREE.Color(0xff0000) },
     customOffset: { value: 1 },
     scale: { value: 1 },
-    dashSize: { value: 1 }, //显示线段的大小。默认为3。
-    gapSize: { value: 1 }, //间隙的大小。默认为1
-    totalSize: { value: 2 }
+    dashSize: { value: 50 }, //显示线段的大小。默认为3。
+    gapSize: { value: 100 }, //间隙的大小。默认为1
+    totalSize: { value: 150 }
   };
   customMateria = new THREE.ShaderMaterial({
     uniforms: customUniforms,
@@ -73,7 +125,7 @@ function init(arrPostion) {
     fragmentShader: document.getElementById("fragmentShader_lineDashed")
       .textContent
   });
-  
+
   line = new THREE.Line(geometrySpline, customMateria);
   ///////////////// 自定义材质 //////////////////
 
@@ -100,7 +152,6 @@ function init(arrPostion) {
   window.addEventListener("resize", onWindowResize, false);
 }
 
-
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -112,11 +163,11 @@ function animate() {
   requestAnimationFrame(animate);
 
   render();
-//   stats.update();
+  //   stats.update();
 }
 
 function render() {
-  let customOffsetValue = customUniforms.customOffset.value + 0.1;
+  let customOffsetValue = customUniforms.customOffset.value + 1;
   customOffsetValue %= customUniforms.totalSize.value;
   customOffsetValue = Math.abs(customOffsetValue.toFixed(1));
   customUniforms.customOffset.value = customOffsetValue;
