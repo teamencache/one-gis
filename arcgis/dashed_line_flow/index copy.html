@@ -10,8 +10,7 @@
   -->
   <title>Animated lines with WebGL - 4.14</title>
 
-  <script src="../../plugin/gl-matrix-2.8.1.js"></script>
-  <script src="../../plugin/jquery-1.11.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix.js"></script>
 
   <link rel="stylesheet"
     href="http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/esri/themes/light/main.css" />
@@ -51,9 +50,9 @@
       "esri/geometry/support/webMercatorUtils",
 
       "esri/layers/GraphicsLayer",
-      'esri/layers/MapImageLayer',
+
       "esri/views/MapView",
-      "esri/geometry/Point",
+
       "esri/views/2d/layers/BaseLayerViewGL2D"
     ], function (
       Map,
@@ -61,9 +60,7 @@
       watchUtils,
       webMercatorUtils,
       GraphicsLayer,
-      MapImageLayer,
       MapView,
-      Point,
       BaseLayerViewGL2D
     ) {
       // Subclass the custom layer view from BaseLayerViewGL2D.
@@ -563,45 +560,38 @@
         }
       });
 
-      //基础底图服务
-      var baseLayer = new MapImageLayer({
-        id:'基础底图服务',
-        url: 'http://218.93.18.218:81/arcgis/rest/services/changzhou/ChangZhou_WaterDB/MapServer'
-      })
-
       // Now we can create the map, the view, load the data and finally
       // create an instance of the custom layer and add it to the map.
       var map = new Map({
-        layers: [baseLayer]
-      });
-
-      var center = new Point({
-        x: 119.69133593939456,
-        y: 31.690797455859403,
-        spatialReference: {
-          wkid: 4326
+        basemap: {
+          portalItem: {
+            id: "9d5cf81cf8ce437584cedc8a2ee4ea4e"
+          }
         }
       });
 
       var view = new MapView({
         container: "viewDiv",
         map: map,
-        center: webMercatorUtils.geographicToWebMercator(center),
-        zoom: 10
+        center: [-74.006, 40.7128],
+        zoom: 15
       });
+      //x: 119.69133593939456
+//y: 31.690797455859403
+//http://218.93.18.218:81/arcgis/rest/services/changzhou/ChangZhou_WaterDB/MapServer
       esriRequest(
-        "../../three/data/CZ_SY_Rivers.json",
+        "https://arcgis.github.io/arcgis-samples-javascript/sample-data/custom-gl-animated-lines/lines.json",
         {
           responseType: "json"
         }
       ).then(function (response) {
-        var graphics = response.data.features.map(function (feature) {
+        var graphics = response.data.map(function (trip) {
           return {
             attributes: {
-              color: [255, 0, 0]
+              color: trip.color
             },
             geometry: webMercatorUtils.geographicToWebMercator({
-              paths: feature.geometry.paths,
+              paths: [trip.path],
               type: "polyline",
               spatialReference: {
                 wkid: 4326
@@ -614,10 +604,8 @@
           graphics: graphics
         });
 
-        map.layers.add(layer); 
+        map.layers.add(layer);
       });
-      window.map = map;
-      window.view = view;
     });
   </script>
 </head>
