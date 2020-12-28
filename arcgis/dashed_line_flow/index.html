@@ -14,9 +14,9 @@
   <script src="../../plugin/jquery-1.11.1.min.js"></script>
 
   <link rel="stylesheet"
-    href="http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/esri/themes/light/main.css" />
+    href="http://localhost/arcgis_js_v416/arcgis_js_api/library/4.16/esri/themes/light/main.css" />
   <script>
-    var apiUrl = 'http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/';
+    var apiUrl = 'http://localhost/arcgis_js_v416/arcgis_js_api/library/4.16/';
 
     var dojoConfig = {
       baseUrl: window.apiUrl + 'dojo',
@@ -28,7 +28,8 @@
       }] */
     };
   </script>
-  <script src="http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/dojo/dojo.js"></script>
+  <!-- <script src="http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/dojo/dojo.js"></script> -->
+  <script src="http://localhost/arcgis_js_v416/arcgis_js_api/library/4.16/dojo/dojo.js"></script>
 
   <style>
     html,
@@ -71,8 +72,8 @@
         // Locations of the two vertex attributes that we use. They
         // will be bound to the shader program before linking.
         aPosition: 0,
-        aOffset: 1,
-        aDistance: 2,
+        aOffset: 2,
+        aDistance: 10,
         aSide: 3,
         aColor: 4,
 
@@ -144,7 +145,7 @@
             "varying float v_distance;" +
             "varying float v_side;" +
             "varying vec4 v_color;" +
-            "const float TRAIL_SPEED = 50.0;" +
+            "const float TRAIL_SPEED = 300.0;" +
             "const float TRAIL_LENGTH = 300.0;" +
             "const float TRAIL_CYCLE = 1000.0;" +
             "void main() {" +
@@ -566,12 +567,13 @@
       //基础底图服务
       var baseLayer = new MapImageLayer({
         id:'基础底图服务',
-        url: 'http://218.93.18.218:81/arcgis/rest/services/changzhou/ChangZhou_WaterDB/MapServer'
+        url: 'http://202.104.140.38:81/arcgis/rest/services/changzhou/ChangZhou_WaterDB/MapServer'
       })
 
       // Now we can create the map, the view, load the data and finally
       // create an instance of the custom layer and add it to the map.
       var map = new Map({
+        basemap: "topo",
         layers: [baseLayer]
       });
 
@@ -613,6 +615,7 @@
         var layer = new CustomLayer({
           graphics: graphics
         });
+        layer.id = '流线';
 
         map.layers.add(layer); 
       });

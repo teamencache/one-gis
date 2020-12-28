@@ -20,7 +20,7 @@ function getJsonData(type) {
       $.getJSON(url, geoJsonHandler);
       break;
     case "ArcgisJSON":
-      url = "../data/water_SNST.json";
+      url = "../data/CZ_SY_Rivers.json";
       $.getJSON(url, arcgisJsonHandler);
       break;
   }
@@ -62,8 +62,8 @@ function arcgisJsonHandler(data) {
   let feature = null;
   for (let i = 0; i < data.features.length; i++) {
     feature = data.features[i];
-    if (feature.attributes.NAME == "京杭运河") {
-      xjRings = feature.geometry.rings[0];
+    if (feature.attributes.RiverOID == 3) {
+      xjRings = feature.geometry.paths[0];
       break;
     }
   }
@@ -76,7 +76,7 @@ function arcgisJsonHandler(data) {
 
   let mercatorRings = [];
   let z = 1;
-  for (let i = 0, len = xjRings.length/2; i < len; i++) {
+  for (let i = 0, len = xjRings.length; i < len; i++) {
     let coord = xjRings[i];
     let newCoord = projection(coord);
     mercatorRings.push(newCoord[0]);
@@ -113,9 +113,9 @@ function init(arrPostion) {
     customColor: { value: new THREE.Color(0xff0000) },
     customOffset: { value: 1 },
     scale: { value: 1 },
-    dashSize: { value: 50 }, //显示线段的大小。默认为3。
-    gapSize: { value: 100 }, //间隙的大小。默认为1
-    totalSize: { value: 150 }
+    dashSize: { value: 20 }, //显示线段的大小。默认为3。
+    gapSize: { value: 20 }, //间隙的大小。默认为1
+    totalSize: { value: 40 }
   };
   customMateria = new THREE.ShaderMaterial({
     uniforms: customUniforms,

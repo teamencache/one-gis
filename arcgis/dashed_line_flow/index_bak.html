@@ -13,9 +13,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix.js"></script>
 
   <link rel="stylesheet"
-    href="http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/esri/themes/light/main.css" />
+    href="http://localhost/arcgis_js_v416/arcgis_js_api/library/4.16/esri/themes/light/main.css" />
   <script>
-    var apiUrl = 'http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/';
+    var apiUrl = 'http://localhost/arcgis_js_v416/arcgis_js_api/library/4.16/';
 
     var dojoConfig = {
       baseUrl: window.apiUrl + 'dojo',
@@ -27,7 +27,7 @@
       }] */
     };
   </script>
-  <script src="http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/dojo/dojo.js"></script>
+  <script src="http://localhost/arcgis_js_v416/arcgis_js_api/library/4.16/dojo/dojo.js"></script>
 
   <style>
     html,
@@ -68,8 +68,8 @@
         // Locations of the two vertex attributes that we use. They
         // will be bound to the shader program before linking.
         aPosition: 0,
-        aOffset: 1,
-        aDistance: 2,
+        aOffset: 2,
+        aDistance: 10,
         aSide: 3,
         aColor: 4,
 
@@ -573,13 +573,11 @@
       var view = new MapView({
         container: "viewDiv",
         map: map,
-        center: [-74.006, 40.7128],
+        center: [119.69133593939456,31.690797455859403],//[-74.006, 40.7128],
         zoom: 15
       });
-      //x: 119.69133593939456
-//y: 31.690797455859403
-//http://218.93.18.218:81/arcgis/rest/services/changzhou/ChangZhou_WaterDB/MapServer
-      esriRequest(
+
+      /* esriRequest(
         "https://arcgis.github.io/arcgis-samples-javascript/sample-data/custom-gl-animated-lines/lines.json",
         {
           responseType: "json"
@@ -592,6 +590,26 @@
             },
             geometry: webMercatorUtils.geographicToWebMercator({
               paths: [trip.path],
+              type: "polyline",
+              spatialReference: {
+                wkid: 4326
+              }
+            })
+          };
+        }); */
+        esriRequest(
+        "../../three/data/CZ_SY_Rivers.json",
+        {
+          responseType: "json"
+        }
+      ).then(function (response) {
+        var graphics = response.data.features.map(function (feature) {
+          return {
+            attributes: {
+              color: [255, 0, 0]
+            },
+            geometry: webMercatorUtils.geographicToWebMercator({
+              paths: feature.geometry.paths,
               type: "polyline",
               spatialReference: {
                 wkid: 4326
