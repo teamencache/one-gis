@@ -146,8 +146,8 @@
             "varying float v_side;" +
             "varying vec4 v_color;" +
             "const float TRAIL_SPEED = 300.0;" +
-            "const float TRAIL_LENGTH = 300.0;" +
-            "const float TRAIL_CYCLE = 1000.0;" +
+            "const float TRAIL_LENGTH = 2500.0;" +
+            "const float TRAIL_CYCLE = 5000.0;" +
             "void main() {" +
             "  float d = mod(v_distance - u_current_time * TRAIL_SPEED, TRAIL_CYCLE);" +
             "  float a1 = d < TRAIL_LENGTH ? mix(0.0, 1.0, d / TRAIL_LENGTH) : 0.0;" +

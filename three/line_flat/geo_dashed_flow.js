@@ -13,6 +13,7 @@ var WIDTH = window.innerWidth,
 getJsonData("ArcgisJSON");
 
 function getJsonData(type) {
+  initThree();
   var url;
   switch (type) {
     case "GeoJSON":
@@ -29,60 +30,68 @@ function getJsonData(type) {
 function geoJsonHandler(data) {
   let xjRings = null;
   let feature = null;
-  for (let i = 0; i < data.features.length; i++) {
-    feature = data.features[i];
-    if (feature.properties.name == "新疆维吾尔自治区") {
-      xjRings = feature.geometry.coordinates[0][0];
-      break;
-    }
-  }
   //设置投影
   let projection = d3
     .geoMercator()
     .center([86.161412, 41.662478])
     .scale(1200)
     .translate([0, 0]);
-
-  let mercatorRings = [];
   let z = 1;
-  for (let i = 0, len = xjRings.length; i < len; i++) {
-    let coord = xjRings[i];
-    let newCoord = projection(coord);
-    mercatorRings.push(newCoord[0]);
-    mercatorRings.push(-newCoord[1]);
-    mercatorRings.push(z);
-  }
+  for (let i = 0; i < data.features.length; i++) {
+    feature = data.features[i];
+    xjRings = feature.geometry.coordinates[0][0];
+    /* if (feature.properties.name == "新疆维吾尔自治区") {
+      xjRings = feature.geometry.coordinates[0][0];
+      break;
+    } */
+    let mercatorRings = [];
 
-  init(mercatorRings);
+    for (let i = 0, len = xjRings.length; i < len; i++) {
+      let coord = xjRings[i];
+      let newCoord = projection(coord);
+      mercatorRings.push(newCoord[0]);
+      mercatorRings.push(-newCoord[1]);
+      mercatorRings.push(z);
+    }
+    initLine(mercatorRings);
+  }
+  window.addEventListener("resize", onWindowResize, false);
+
   animate();
 }
 
 function arcgisJsonHandler(data) {
   let xjRings = null;
   let feature = null;
-  for (let i = 0; i < data.features.length; i++) {
-    feature = data.features[i];
-    if (feature.attributes.RiverOID == 3) {
-      xjRings = feature.geometry.paths[0];
-      break;
-    }
-  }
   //设置投影
   let projection = d3
     .geoMercator()
-    .center([120.04314, 31.73057])
+    .center([119.74314, 31.73057])
     .scale(100000)
     .translate([0, 0]);
-
-  let mercatorRings = [];
   let z = 1;
-  for (let i = 0, len = xjRings.length; i < len; i++) {
-    let coord = xjRings[i];
-    let newCoord = projection(coord);
-    mercatorRings.push(newCoord[0]);
-    mercatorRings.push(-newCoord[1]);
-    mercatorRings.push(z);
+  for (let i = 0; i < data.features.length; i++) {
+    feature = data.features[i];
+    xjRings = feature.geometry.paths[0];
+    let mercatorRings = [];
+
+    for (let i = 0, len = xjRings.length; i < len; i++) {
+      let coord = xjRings[i];
+      let newCoord = projection(coord);
+      mercatorRings.push(newCoord[0]);
+      mercatorRings.push(-newCoord[1]);
+      mercatorRings.push(z);
+    }
+    initLine(mercatorRings);
+    /* if (feature.attributes.RiverOID == 3) {
+      xjRings = feature.geometry.paths[0];
+      break;
+    } */
   }
+
+
+
+
   // console.log(mercatorRings);
   /*
   0: -450.3640620528313
@@ -91,11 +100,37 @@ function arcgisJsonHandler(data) {
   1686:-450.3640620528313
   1687: 291.9001123656926
   */
-  init(mercatorRings);
+
   animate();
 }
 
-function init(arrPostion) {
+function initLine(arrPostion) {
+
+
+  let geometrySpline = new THREE.BufferGeometry().setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(arrPostion, 3)
+  );
+
+  line = new THREE.Line(geometrySpline, customMateria);
+  line.computeLineDistances();
+
+  objects.push(line);
+  scene.add(line);
+
+
+
+  /* stats = new Stats();
+  container.appendChild(stats.dom); */
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.minDistance = 10;
+  controls.maxDistance = 500;
+  //
+
+}
+
+function initThree() {
   camera = new THREE.PerspectiveCamera(75, WIDTH / HEIGHT, 1, 1000);
   camera.position.z = 800;
 
@@ -103,54 +138,47 @@ function init(arrPostion) {
   scene.background = new THREE.Color(0xdddddd);
   scene.fog = new THREE.Fog(0xdddddd, 900, 1000);
 
-  let geometrySpline = new THREE.BufferGeometry().setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(arrPostion, 3)
-  );
-
-  /////////////// 自定义材质 ////////////////
-  customUniforms = {
-    customColor: { value: new THREE.Color(0xff0000) },
-    customOffset: { value: 1 },
-    scale: { value: 1 },
-    dashSize: { value: 20 }, //显示线段的大小。默认为3。
-    gapSize: { value: 20 }, //间隙的大小。默认为1
-    totalSize: { value: 40 }
-  };
-  customMateria = new THREE.ShaderMaterial({
-    uniforms: customUniforms,
-    linewidth: 5,
-    vertexShader: document.getElementById("vertexShader_lineDashed")
-      .textContent,
-    fragmentShader: document.getElementById("fragmentShader_lineDashed")
-      .textContent
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
   });
-
-  line = new THREE.Line(geometrySpline, customMateria);
-  ///////////////// 自定义材质 //////////////////
-
-  line.computeLineDistances();
-
-  objects.push(line);
-  scene.add(line);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(WIDTH, HEIGHT);
 
   var container = document.getElementById("container");
   container.appendChild(renderer.domElement);
 
-  /* stats = new Stats();
-  container.appendChild(stats.dom);
-
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.minDistance = 10;
-  controls.maxDistance = 500; */
-  //
-
-  window.addEventListener("resize", onWindowResize, false);
+  /////////////// 自定义材质 ////////////////
+  customUniforms = {
+    customColor: {
+      value: new THREE.Color(0xff0000)
+    },
+    customOffset: {
+      value: 0
+    },
+    scale: {
+      value: 2
+    },
+    dashSize: {
+      value: 20
+    }, //显示线段的大小。默认为3。
+    gapSize: {
+      value: 20
+    }, //间隙的大小。默认为1
+    totalSize: {
+      value: 40
+    }
+  };
+  customMateria = new THREE.ShaderMaterial({
+    uniforms: customUniforms,
+    linewidth: 15,
+    vertexShader: document.getElementById("vertexShader_lineDashed")
+      .textContent,
+    fragmentShader: document.getElementById("fragmentShader_lineDashed")
+      .textContent
+  });
+  ///////////////// 自定义材质 //////////////////
 }
+
 
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -163,7 +191,7 @@ function animate() {
   requestAnimationFrame(animate);
 
   render();
-  //   stats.update();
+  // stats.update();
 }
 
 function render() {
