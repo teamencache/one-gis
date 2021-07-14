@@ -44,11 +44,14 @@ let offsetVertex = [];
 let offsetIndex = [];
 let vertexData = [
     -5.0, 10.0, 0,
-    0, 10.0, 0,
-    0.0, -5.0, 0,
-    -15, -10, 0,
-    - 20, 20, 0,
-    0, 20, 0,
+    0, 5.0, 0,
+    3, -5.0, 0,
+    -15, -15, 0,
+    - 15, 20, 0,
+    15, 5, 0,
+    10, 20, 0,
+    5, 20, 0,
+    10, -10, 0,
 ];
 
 (function main() {
@@ -66,7 +69,7 @@ function render() {
     gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFEER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.drawElements(gl.TRIANGLES, offsetIndex.length, gl.UNSIGNED_BYTE, 0);
-    // gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_BYTE, 0);
+    // gl.drawElements(gl.TRIANGLES, 3, gl.UNSIGNED_BYTE, 0);
     // gl.drawElements(gl.POINTS, offsetIndex.length, gl.UNSIGNED_BYTE, 0);
 }
 
@@ -177,103 +180,146 @@ function initEvent() {
 
 function initLinePlaneVertex() {
 
-    let index;//顶点索引
-    let seg = 0;//线段索引
-    for (index = 0; index < vertexData.length - size; index += size) {
-        let offsets = initNormal(vertexData, index, size);
+    let lineSegments = vertexData.length / size - 1;
+    for (let lineIndex = 0; lineIndex < lineSegments; lineIndex++) {
+        let offsets = initNormal(vertexData, lineIndex, size);
         Array.prototype.push.apply(offsetVertex, offsets);
-
         Array.prototype.push.apply(offsetIndex, [
-            index + seg + 0, index + seg + 1, index + seg + 3,
-            index + seg + 0, index + seg + 3, index + seg + 2
+            lineIndex * 4 + 0, lineIndex * 4 + 1, lineIndex * 4 + 3,
+            lineIndex * 4 + 0, lineIndex * 4 + 3, lineIndex * 4 + 2
         ]);
-        if (seg == 1) {//交点处插入三角形
-            initIntersection(seg);
-            /*  Array.prototype.push.apply(offsetIndex, [
-                 seg * 4 - 2, seg * 4 - 1, seg * 4
-             ]); */
-        }
-        seg++;
+        //交点处插入三角形
+        lineIndex && initIntersection(lineIndex);
     }
 }
 // 沿垂直线条方向扩展出有宽度的线
-function initNormal(data, index, size) {
-    let curr = vec2.fromValues(data[index], data[index + 1]);
-    let next;
-    if ((index + size + size) > data.length) {
-        next = vec2.fromValues(data[index - size], data[index - size + 1]);
-    } else {
-        next = vec2.fromValues(data[index + size], data[index + size + 1]);
-    }
+function initNormal(data, lineIndex, size) {
+    let vertexIndex = lineIndex * size;
+    let curr = vec2.fromValues(data[vertexIndex], data[vertexIndex + 1]);
     let lineDirection = vec2.create();
+    let next = vec2.fromValues(data[vertexIndex + size], data[vertexIndex + size + 1]);
     vec3.subtract(lineDirection, next, curr);
-    // 统一到正方向
-    let fix = 1;
-    // 统一到正方向
-    if (lineDirection[1] * lineDirection[0] < 0) {
-        fix = -1;
-    }
-    let verticalDirection = vec2.fromValues(-lineDirection[1], lineDirection[0]);
-    let radianX = Math.atan(Math.abs(verticalDirection[1] / verticalDirection[0]));
-    let dy = lineWidth / 2 * Math.sin(radianX);
-    let dx = lineWidth / 2 * Math.cos(radianX);
+
+    //通过直线角度直接求
+    let radianX = Math.atan2(lineDirection[1], lineDirection[0]);
+    let dx1 = lineWidth / 2 * Math.cos(radianX + Math.PI / 2);
+    let dy1 = lineWidth / 2 * Math.sin(radianX + Math.PI / 2);
+    let dx2 = lineWidth / 2 * Math.cos(radianX - Math.PI / 2);
+    let dy2 = lineWidth / 2 * Math.sin(radianX - Math.PI / 2);
     let fixedPosition = [
-        curr[0] - fix * dx, curr[1] + dy, 0,
-        curr[0] + fix * dx, curr[1] - dy, 0,
-        next[0] - fix * dx, next[1] + dy, 0,
-        next[0] + fix * dx, next[1] - dy, 0
+        curr[0] + dx1, curr[1] + dy1, 0,
+        curr[0] + dx2, curr[1] + dy2, 0,
+        next[0] + dx1, next[1] + dy1, 0,
+        next[0] + dx2, next[1] + dy2, 0,
     ];
     return fixedPosition
 }
 // 交点处插入一个三角形填充
-function initIntersection(seg) {
-    let endIndex = seg * 4 * size;
-    let begin = vec2.fromValues(offsetVertex[endIndex + size + 0], offsetVertex[endIndex + size + 1]);
-    let end = vec2.fromValues(offsetVertex[endIndex + size * 3 + 0], offsetVertex[endIndex + size * 3 + 1]);
-    let endVec2 = caculateLineParam(begin, end);
-    endVec2[0] = 0;
-    endVec2[1] = 1 / 8;
+function initIntersection(lineIndex) {
+    let rotateDirection = vec3.create();
+    let lastIndex = (lineIndex - 1) * 4 * size;
+    let lastBegin = vec2.fromValues(offsetVertex[lastIndex + 0], offsetVertex[lastIndex + 1]);
+    let lastEnd = vec2.fromValues(offsetVertex[lastIndex + size * 2 + 0], offsetVertex[lastIndex + size * 2 + 1]);
+    let lastParam = mat2.create();
+    let lastDirection = vec2.create();
+    vec2.subtract(lastDirection, lastEnd, lastBegin);
 
-    let beginIndex = (seg - 1) * 4 * size;
-    begin = vec2.fromValues(offsetVertex[beginIndex + size + 0], offsetVertex[beginIndex + size + 1]);
-    end = vec2.fromValues(offsetVertex[beginIndex + size * 3 + 0], offsetVertex[beginIndex + size * 3 + 1]);
-    let beginVec2 = caculateLineParam(begin, end);
-    /* endVec2[0] = -1 / 2;
-    endVec2[1] = 0; */
+    let currIndex = lineIndex * 4 * size;
+    let currBegin = vec2.fromValues(offsetVertex[currIndex + 0], offsetVertex[currIndex + 1]);
+    let currEnd = vec2.fromValues(offsetVertex[currIndex + size * 2 + 0], offsetVertex[currIndex + size * 2 + 1]);
+    let currParam = mat2.create();
+    let currDirection = vec2.create();
+    vec2.subtract(currDirection, currEnd, currBegin);
+
+    vec2.cross(rotateDirection, lastDirection, currDirection);
+    if (rotateDirection[2] < 0) {
+        lastBegin = vec2.fromValues(offsetVertex[lastIndex + size + 0], offsetVertex[lastIndex + size + 1]);
+        lastEnd = vec2.fromValues(offsetVertex[lastIndex + size * 2 + size + 0], offsetVertex[lastIndex + size * 2 + size + 1]);
+        currBegin = vec2.fromValues(offsetVertex[currIndex + size + 0], offsetVertex[currIndex + size + 1]);
+        currEnd = vec2.fromValues(offsetVertex[currIndex + size * 2 + size + 0], offsetVertex[currIndex + size * 2 + size + 1]);
+    }
 
     // 求两条直线的交点坐标
-    let intersectionVertex = caculateLineIntersection(beginVec2, endVec2);
-    /* intersectionVertex[0] = -2.0;
-    intersectionVertex[2] = 8.0; */
+    let intersectionVertex = mat2.create();
+    switch (0) {
+        case lastDirection[0]:
+            currParam = caculateLineParam(currBegin, currEnd);
+            intersectionVertex[0] = lastBegin[0];
+            intersectionVertex[2] = currParam[1] - currParam[0] * lastBegin[0];
+            break;
+        case currDirection[0]:
+            lastParam = caculateLineParam(lastBegin, lastEnd);
+            intersectionVertex[0] = currBegin[0];
+            intersectionVertex[2] = lastParam[1] - lastParam[0] * currBegin[0];
+            break;
+        default:
+            currParam = caculateLineParam(currBegin, currEnd);
+            lastParam = caculateLineParam(lastBegin, lastEnd);
+            intersectionVertex[0] = (currParam[1] - lastParam[1]) / (currParam[0] - lastParam[0]);
+            intersectionVertex[2] = currParam[1] - intersectionVertex[0] * currParam[0];
+            break;
+    }
 
-    offsetVertex[endIndex + 0 + 0] = intersectionVertex[0];
-    offsetVertex[endIndex + 0 + 1] = intersectionVertex[2];
-    offsetVertex[beginIndex + size * 3 + 0] = intersectionVertex[0];
-    offsetVertex[beginIndex + size * 3 + 1] = intersectionVertex[2];
+    // 顺时针
+    if (rotateDirection[2] < 0) {
+        offsetVertex[currIndex + size + 0] = intersectionVertex[0];
+        offsetVertex[currIndex + size + 1] = intersectionVertex[2];
+        offsetVertex[lastIndex + size * 2 + size + 0] = intersectionVertex[0];
+        offsetVertex[lastIndex + size * 2 + size + 1] = intersectionVertex[2];
+        Array.prototype.push.apply(offsetIndex, [
+            lineIndex * 4 - 2, lineIndex * 4 - 1, lineIndex * 4 + 0
+        ]);
+    } else {
+        // 逆时针
+        offsetVertex[currIndex + 0] = intersectionVertex[0];
+        offsetVertex[currIndex + 1] = intersectionVertex[2];
+        offsetVertex[lastIndex + size * 2 + 0] = intersectionVertex[0];
+        offsetVertex[lastIndex + size * 2 + 1] = intersectionVertex[2];
+        Array.prototype.push.apply(offsetIndex, [
+            lineIndex * 4 - 1, lineIndex * 4, lineIndex * 4 + 1
+        ]);
+    }
+}
+
+// 根据两个点，计算直线的系数ax+y=b
+function caculateLineParam(begin, end) {
+    let paramMat = mat2.create();
+    paramMat[0] = -(end[1] - begin[1]) / (end[0] - begin[0]);
+    paramMat[2] = end[1] + paramMat[0] * end[0];
+
+    console.log(paramMat);
+    return vec2.fromValues(paramMat[0], paramMat[2]);
+}
+// 计算两个直线的交点ax+y=b;参数是vec2(a,b)
+function caculateLineIntersection(begin, end) {
+    let paramMat = mat2.create();
+    paramMat[0] = begin[0];
+    paramMat[1] = 1;
+    paramMat[2] = end[0];
+    paramMat[3] = 1;
+
+    mat2.invert(paramMat, paramMat);//逆矩阵
+    mat2.multiply(paramMat, paramMat, mat2.fromValues(begin[1], 0, end[1], 0));
+
+    console.log(paramMat);
+    return paramMat
 }
 // 根据两个点，计算直线的系数ax+by=1
-function caculateLineParam(begin, end) {
+function caculateLineParam_bak(begin, end) {
+
     let paramMat = mat2.create();
     paramMat[0] = begin[0];
     paramMat[1] = begin[1];
     paramMat[2] = end[0];
     paramMat[3] = end[1];
     switch (true) {
-        case begin[0] == 0:
+        case begin[0] == end[0]:
             paramMat[0] = 1 / end[0];
-            paramMat[2] = 1 / begin[1];
+            paramMat[2] = 0;
             break;
-        case begin[1] == 0:
-            paramMat[0] = 1 / begin[0];
+        case begin[1] == end[1]:
+            paramMat[0] = 0;
             paramMat[2] = 1 / end[1];
-            break;
-        case end[0] == 0:
-            paramMat[0] = 1 / begin[0];
-            paramMat[2] = 1 / end[1];
-            break;
-        case begin[1] == 0:
-            paramMat[0] = 1 / end[0];
-            paramMat[2] = 1 / begin[1];
             break;
         default:
             mat2.invert(paramMat, paramMat);//逆矩阵
@@ -281,10 +327,10 @@ function caculateLineParam(begin, end) {
             break;
     }
     console.log(paramMat);
-    return vec2.fromValues(paramMat[0], paramMat[1]);
+    return vec2.fromValues(paramMat[0], paramMat[2]);
 }
 // 计算两个直线的交点ax+by=1;参数是vec2(a,b)
-function caculateLineIntersection(begin, end) {
+function caculateLineIntersection_bak(begin, end) {
     let paramMat = mat2.create();
     paramMat[0] = begin[0];
     paramMat[1] = begin[1];
