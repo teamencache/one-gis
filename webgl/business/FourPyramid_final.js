@@ -243,13 +243,13 @@ function initVertex() {
             xyz[0] - inputData.width / 2, xyz[1] - inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 1.0, 0.8,
             xyz[0] - inputData.width / 2, xyz[1] + inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 0.0, 0.8,
 
-            xyz[0] - inputData.width / 2, xyz[1] - inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 1.0, 1.0,
-            xyz[0] + inputData.width / 2, xyz[1] - inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 1.0, 1.0,
-            xyz[0] + inputData.width / 2, xyz[1] + inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 1.0, 1.0,
+            xyz[0] - inputData.width / 2, xyz[1] - inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 0.5, 0.7,
+            xyz[0] + inputData.width / 2, xyz[1] - inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 0.5, 0.7,
+            xyz[0] + inputData.width / 2, xyz[1] + inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 0.5, 0.7,
 
-            xyz[0] - inputData.width / 2, xyz[1] - inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 1.0, 1.0,
-            xyz[0] + inputData.width / 2, xyz[1] + inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 1.0, 1.0,
-            xyz[0] - inputData.width / 2, xyz[1] + inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 1.0, 1.0,
+            xyz[0] - inputData.width / 2, xyz[1] - inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 0.5, 0.7,
+            xyz[0] + inputData.width / 2, xyz[1] + inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 0.5, 0.7,
+            xyz[0] - inputData.width / 2, xyz[1] + inputData.width / 2, xyz[2] + inputData.height, 0.0, 1.0, 0.0, 0.4, 0.5, 0.7,
         ]);
         let startIndex = index * 5;
         indexData.push.apply(indexData, [
@@ -257,8 +257,8 @@ function initVertex() {
             startIndex + 3, startIndex + 4, startIndex + 5,
             startIndex + 6, startIndex + 7, startIndex + 8,
             startIndex + 9, startIndex + 10, startIndex + 11,
-            /* startIndex + 12, startIndex + 13, startIndex + 14,
-            startIndex + 15, startIndex + 16, startIndex + 17, */
+            startIndex + 12, startIndex + 13, startIndex + 14,
+            startIndex + 15, startIndex + 16, startIndex + 17,
         ]);
         // 这里和在顶点中直接写纹理坐标是一样的，分别控制每个面的纹理
         texCoord.push.apply(texCoord, [
