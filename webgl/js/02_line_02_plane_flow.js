@@ -1,19 +1,51 @@
 let vertexStr = `
     attribute vec3 a_Position;
+    attribute float a_Length;
+    attribute float a_LengthBefore;
+    attribute float a_VerticalDirect;
+    attribute float a_TexCoord;
+
+
     uniform mat4 u_ModelMatrix;
     uniform mat4 u_ViewMatrix;
     uniform mat4 u_ProjectionMatrix;
+
+    varying float v_Length;
+    varying float v_LengthBefore;
+    varying float v_VerticalDirect;
+    varying float v_TexCoord;
+
     void main(){
         gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelMatrix * vec4(a_Position,1.0);
         // gl_Position = vec4(a_Position,1.0);
-        gl_PointSize = 10.0;
+        // gl_PointSize = 10.0;
+        v_Length = a_Length;
+        v_LengthBefore = a_LengthBefore;
+        v_VerticalDirect = a_VerticalDirect;
+        v_TexCoord = a_TexCoord;
     }
 `;
 
 let fragmentStr = `
     precision mediump float;
+
+    uniform float u_Time;
+    uniform float u_TotalLength_n;
+    uniform float u_TotalLength_p;
+
+    varying float v_Length;
+    varying float v_LengthBefore;
+    varying float v_VerticalDirect;
+    varying float v_TexCoord;
+
     void main(){
-        gl_FragColor = vec4(0,1.0,0,1.0);
+        float red =0.0;
+        if(v_VerticalDirect > 0.0){
+            red = sin(50.0 * v_LengthBefore / u_TotalLength_p + u_Time);
+        }else{
+            red = sin(50.0 * v_LengthBefore / u_TotalLength_n + u_Time);
+        }
+        gl_FragColor = vec4(abs(red),1.0,0,1.0);
     }
 `;
 let ele;
@@ -21,6 +53,34 @@ let gl, vertexShader, fragmentShader, shaderProgram;
 let u_ProjectionMatrix, u_ViewMatrix, u_ModelMatrix, eye, direction, up;
 let variable = {
     a_Position: {
+        local: null,
+        value: null
+    },
+    a_Length: {
+        local: null,
+        value: null
+    },
+    a_VerticalDirect: {
+        local: null,
+        value: null
+    },
+    a_TexCoord: {
+        local: null,
+        value: null
+    },
+    a_LengthBefore: {
+        local: null,
+        value: null
+    },
+    u_TotalLength_n: {
+        local: null,
+        value: 0.0
+    },
+    u_TotalLength_p: {
+        local: null,
+        value: 0.0
+    },
+    u_Time: {
         local: null,
         value: null
     },
@@ -38,20 +98,21 @@ let variable = {
     },
 };
 
-let size = 3;
+let pointLength = 3;
 let lineWidth = 4;
+let offsetSize = 7;//[x,y,z,rotateDirect,length, totalLegth,a_TexCoord]
 let offsetVertex = [];
 let offsetIndex = [];
 let vertexData = [
     -5.0, 10.0, 0,
     0, 5.0, 0,
     3, -5.0, 0,
-    -15, -15, 0,
+    /* -15, -15, 0,
     - 15, 20, 0,
     15, 5, 0,
     10, 20, 0,
     5, 20, 0,
-    10, -10, 0,
+    10, -10, 0, */
 ];
 
 (function main() {
@@ -68,13 +129,19 @@ function render() {
     gl.clearColor(0, 0, 0, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFEER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.uniform1f(variable.u_Time.local, variable.u_Time.value);
+    gl.uniform1f(variable.u_TotalLength_n.local, variable.u_TotalLength_n.value);
+    gl.uniform1f(variable.u_TotalLength_p.local, variable.u_TotalLength_p.value);
+
     gl.drawElements(gl.TRIANGLES, offsetIndex.length, gl.UNSIGNED_BYTE, 0);
     // gl.drawElements(gl.TRIANGLES, 3, gl.UNSIGNED_BYTE, 0);
     // gl.drawElements(gl.POINTS, offsetIndex.length, gl.UNSIGNED_BYTE, 0);
 }
 
 function animate() {
-    // requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
+    variable.u_Time.value -= 0.05;
     render();
 }
 
@@ -123,6 +190,27 @@ function initLocation() {
     let location = gl.getAttribLocation(shaderProgram, 'a_Position');
     variable.a_Position.local = location;
 
+    location = gl.getAttribLocation(shaderProgram, 'a_Length');
+    variable.a_Length.local = location;
+
+    location = gl.getAttribLocation(shaderProgram, 'a_LengthBefore');
+    variable.a_LengthBefore.local = location;
+
+    location = gl.getAttribLocation(shaderProgram, 'a_VerticalDirect');
+    variable.a_VerticalDirect.local = location;
+
+    location = gl.getAttribLocation(shaderProgram, 'a_TexCoord');
+    variable.a_TexCoord.local = location;
+
+    location = gl.getUniformLocation(shaderProgram, 'u_TotalLength_n');
+    variable.u_TotalLength_n.local = location;
+
+    location = gl.getUniformLocation(shaderProgram, 'u_TotalLength_p');
+    variable.u_TotalLength_p.local = location;
+
+    location = gl.getUniformLocation(shaderProgram, 'u_Time');
+    variable.u_Time.local = location;
+
     location = gl.getUniformLocation(shaderProgram, 'u_ModelMatrix');
     variable.u_ModelMatrix.local = location;
 
@@ -134,6 +222,8 @@ function initLocation() {
 }
 
 function initVariable() {
+
+    variable.u_Time.value = 0;
 
     u_ModelMatrix = mat4.create();
     variable.u_ModelMatrix.value = u_ModelMatrix;
@@ -156,16 +246,28 @@ function initVariable() {
 
 function initVertex() {
     initLinePlaneVertex();
-    let vertexData = new Float32Array(offsetVertex);
+    let arrVertex = new Float32Array(offsetVertex);
     let vertexBuffer = gl.createBuffer();
     if (!vertexBuffer) {
         console.log('vertexBuffer failed');
     }
-    let FSIZE = vertexData.BYTES_PER_ELEMENT;
+    let FSIZE = arrVertex.BYTES_PER_ELEMENT;
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(variable.a_Position.local, 3, gl.FLOAT, false, FSIZE * 3, 0);
+    gl.bufferData(gl.ARRAY_BUFFER, arrVertex, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(variable.a_Position.local, 3, gl.FLOAT, false, FSIZE * offsetSize, 0);
     gl.enableVertexAttribArray(variable.a_Position.local);
+
+    gl.vertexAttribPointer(variable.a_VerticalDirect.local, 1, gl.FLOAT, false, FSIZE * offsetSize, FSIZE * 3);
+    gl.enableVertexAttribArray(variable.a_VerticalDirect.local);
+
+    gl.vertexAttribPointer(variable.a_Length.local, 1, gl.FLOAT, false, FSIZE * offsetSize, FSIZE * 4);
+    gl.enableVertexAttribArray(variable.a_Length.local);
+
+    gl.vertexAttribPointer(variable.a_LengthBefore.local, 1, gl.FLOAT, false, FSIZE * offsetSize, FSIZE * 5);
+    gl.enableVertexAttribArray(variable.a_LengthBefore.local);
+
+    gl.vertexAttribPointer(variable.a_TexCoord.local, 1, gl.FLOAT, false, FSIZE * offsetSize, FSIZE * 6);
+    gl.enableVertexAttribArray(variable.a_TexCoord.local);
 
     let indexData = new Uint8Array(offsetIndex);
     let indexBuffer = gl.createBuffer();
@@ -180,7 +282,7 @@ function initEvent() {
 
 function initLinePlaneVertex() {
 
-    let lineSegments = vertexData.length / size - 1;
+    let lineSegments = vertexData.length / pointLength - 1;//最后一段线条排除
     for (let lineIndex = 0; lineIndex < lineSegments; lineIndex++) {
         let offsets = initNormal(vertexData, lineIndex, lineSegments);
         Array.prototype.push.apply(offsetVertex, offsets);
@@ -191,17 +293,20 @@ function initLinePlaneVertex() {
         //交点处插入三角形
         lineIndex && initIntersection(lineIndex);
     }
+    for (let lineIndex = 0; lineIndex <= lineSegments; lineIndex++) {
+        lineIndex && caculateLineLength(lineIndex);
+    }
 }
 // 沿垂直线条方向扩展出有宽度的线
 function initNormal(data, lineIndex, lineSegments) {
-    let vertexIndex = lineIndex * size;
+    let vertexIndex = lineIndex * pointLength;
     let currBegin = vec2.fromValues(data[vertexIndex], data[vertexIndex + 1]);
-    let currEnd = vec2.fromValues(data[vertexIndex + size], data[vertexIndex + size + 1]);
+    let currEnd = vec2.fromValues(data[vertexIndex + pointLength], data[vertexIndex + pointLength + 1]);
     let currDirection = vec2.create();
     vec3.subtract(currDirection, currEnd, currBegin);
 
-    let nextBegin = vec2.fromValues(data[vertexIndex + size], data[vertexIndex + size + 1]);
-    let nextEnd = vec2.fromValues(data[vertexIndex + 2 * size], data[vertexIndex + 2 * size + 1]);
+    let nextBegin = vec2.fromValues(data[vertexIndex + pointLength], data[vertexIndex + pointLength + 1]);
+    let nextEnd = vec2.fromValues(data[vertexIndex + 2 * pointLength], data[vertexIndex + 2 * pointLength + 1]);
     let nextDirection = vec2.create();
     vec3.subtract(nextDirection, nextEnd, nextBegin);
 
@@ -217,27 +322,28 @@ function initNormal(data, lineIndex, lineSegments) {
     let dy2 = -dy1;
     /* let dx2 = lineWidth / 2 * Math.cos(radianX - Math.PI / 2);
     let dy2 = lineWidth / 2 * Math.sin(radianX - Math.PI / 2); */
+    //[x,y,z,rotateDirect,length, totalLegth, a_TexCoord]
     let fixedPosition = [
-        currBegin[0] + dx1, currBegin[1] + dy1, 0,
-        currBegin[0] + dx2, currBegin[1] + dy2, 0,
-        currEnd[0] + dx1, currEnd[1] + dy1, 0,
-        currEnd[0] + dx2, currEnd[1] + dy2, 0,
+        currBegin[0] + dx1, currBegin[1] + dy1, 0, 1.0, 0.0, 0.0, 0.0,
+        currBegin[0] + dx2, currBegin[1] + dy2, 0, 1.0, 0.0, 0.0, 0.0,
+        currEnd[0] + dx1, currEnd[1] + dy1, 0, -1.0, 0.0, 0.0, 0.0,
+        currEnd[0] + dx2, currEnd[1] + dy2, 0, -1.0, 0.0, 0.0, 0.0,
     ];
     return fixedPosition
 }
 // 交点处插入一个三角形填充
 function initIntersection(lineIndex) {
     let rotateDirection = vec3.create();
-    let lastIndex = (lineIndex - 1) * 4 * size;
+    let lastIndex = (lineIndex - 1) * 4 * offsetSize;
     let lastBegin = vec2.fromValues(offsetVertex[lastIndex + 0], offsetVertex[lastIndex + 1]);
-    let lastEnd = vec2.fromValues(offsetVertex[lastIndex + size * 2 + 0], offsetVertex[lastIndex + size * 2 + 1]);
+    let lastEnd = vec2.fromValues(offsetVertex[lastIndex + offsetSize * 2 + 0], offsetVertex[lastIndex + offsetSize * 2 + 1]);
     let lastParam = mat2.create();
     let lastDirection = vec2.create();
     vec2.subtract(lastDirection, lastEnd, lastBegin);
 
-    let currIndex = lineIndex * 4 * size;
+    let currIndex = lineIndex * 4 * offsetSize;
     let currBegin = vec2.fromValues(offsetVertex[currIndex + 0], offsetVertex[currIndex + 1]);
-    let currEnd = vec2.fromValues(offsetVertex[currIndex + size * 2 + 0], offsetVertex[currIndex + size * 2 + 1]);
+    let currEnd = vec2.fromValues(offsetVertex[currIndex + offsetSize * 2 + 0], offsetVertex[currIndex + offsetSize * 2 + 1]);
     let currParam = mat2.create();
     let currDirection = vec2.create();
     vec2.subtract(currDirection, currEnd, currBegin);
@@ -246,10 +352,10 @@ function initIntersection(lineIndex) {
     let crossDirection = rotateDirection[2] > 0 ? 1 : -1;
     // crossDirection = 1;
     if (crossDirection < 0) {
-        lastBegin = vec2.fromValues(offsetVertex[lastIndex + size + 0], offsetVertex[lastIndex + size + 1]);
-        lastEnd = vec2.fromValues(offsetVertex[lastIndex + size * 2 + size + 0], offsetVertex[lastIndex + size * 2 + size + 1]);
-        currBegin = vec2.fromValues(offsetVertex[currIndex + size + 0], offsetVertex[currIndex + size + 1]);
-        currEnd = vec2.fromValues(offsetVertex[currIndex + size * 2 + size + 0], offsetVertex[currIndex + size * 2 + size + 1]);
+        lastBegin = vec2.fromValues(offsetVertex[lastIndex + offsetSize + 0], offsetVertex[lastIndex + offsetSize + 1]);
+        lastEnd = vec2.fromValues(offsetVertex[lastIndex + offsetSize * 2 + offsetSize + 0], offsetVertex[lastIndex + offsetSize * 2 + offsetSize + 1]);
+        currBegin = vec2.fromValues(offsetVertex[currIndex + offsetSize + 0], offsetVertex[currIndex + offsetSize + 1]);
+        currEnd = vec2.fromValues(offsetVertex[currIndex + offsetSize * 2 + offsetSize + 0], offsetVertex[currIndex + offsetSize * 2 + offsetSize + 1]);
     }
 
     // 求两条直线的交点坐标，区分x=a、ax+y=b两种情况
@@ -274,18 +380,19 @@ function initIntersection(lineIndex) {
     }
 
     if (crossDirection < 0) {// 顺时针
-        offsetVertex[currIndex + size + 0] = intersectionVertex[0];
-        offsetVertex[currIndex + size + 1] = intersectionVertex[2];
-        offsetVertex[lastIndex + size * 2 + size + 0] = intersectionVertex[0];
-        offsetVertex[lastIndex + size * 2 + size + 1] = intersectionVertex[2];
+        offsetVertex[currIndex + offsetSize + 0] = intersectionVertex[0];
+        offsetVertex[currIndex + offsetSize + 1] = intersectionVertex[2];
+        offsetVertex[lastIndex + offsetSize * 2 + offsetSize + 0] = intersectionVertex[0];
+        offsetVertex[lastIndex + offsetSize * 2 + offsetSize + 1] = intersectionVertex[2];
         Array.prototype.push.apply(offsetIndex, [
             lineIndex * 4 - 2, lineIndex * 4 - 1, lineIndex * 4 + 0
         ]);
+
     } else {// 逆时针
         offsetVertex[currIndex + 0] = intersectionVertex[0];
         offsetVertex[currIndex + 1] = intersectionVertex[2];
-        offsetVertex[lastIndex + size * 2 + 0] = intersectionVertex[0];
-        offsetVertex[lastIndex + size * 2 + 1] = intersectionVertex[2];
+        offsetVertex[lastIndex + offsetSize * 2 + 0] = intersectionVertex[0];
+        offsetVertex[lastIndex + offsetSize * 2 + 1] = intersectionVertex[2];
         Array.prototype.push.apply(offsetIndex, [
             lineIndex * 4 - 1, lineIndex * 4, lineIndex * 4 + 1
         ]);
@@ -313,61 +420,27 @@ function caculateLineIntersection(begin, end) {
     console.log(paramMat);
     return paramMat
 }
-// 根据两个点，计算直线的系数ax+by=1
-function caculateLineParam_bak(begin, end) {
 
-    let paramMat = mat2.create();
-    paramMat[0] = begin[0];
-    paramMat[1] = begin[1];
-    paramMat[2] = end[0];
-    paramMat[3] = end[1];
-    switch (true) {
-        case begin[0] == end[0]:
-            paramMat[0] = 1 / end[0];
-            paramMat[2] = 0;
-            break;
-        case begin[1] == end[1]:
-            paramMat[0] = 0;
-            paramMat[2] = 1 / end[1];
-            break;
-        default:
-            mat2.invert(paramMat, paramMat);//逆矩阵
-            mat2.multiply(paramMat, paramMat, mat2.fromValues(1, 0, 1, 0));
-            break;
-    }
-    console.log(paramMat);
-    return vec2.fromValues(paramMat[0], paramMat[2]);
+function caculateLineLength(lineIndex) {
+    let endIndex = lineIndex * 4 * offsetSize;
+    let length = distanceByIndex(endIndex - offsetSize * 2);
+    variable.u_TotalLength_p.value += length;
+
+    length = distanceByIndex(endIndex - offsetSize);
+    variable.u_TotalLength_n.value += length;
+
+    distanceByIndex(endIndex);
+    variable.u_TotalLength_p.value += length;
+
+    distanceByIndex(endIndex + offsetSize);
+    variable.u_TotalLength_n.value += length;
 }
-// 计算两个直线的交点ax+by=1;参数是vec2(a,b)
-function caculateLineIntersection_bak(begin, end) {
-    let paramMat = mat2.create();
-    paramMat[0] = begin[0];
-    paramMat[1] = begin[1];
-    paramMat[2] = end[0];
-    paramMat[3] = end[1];
-    switch (true) {
-        case begin[0] == 0:
-            paramMat[0] = 1 / end[0];
-            paramMat[2] = 1 / begin[1];
-            break;
-        case begin[1] == 0:
-            paramMat[0] = 1 / begin[0];
-            paramMat[2] = 1 / end[1];
-            break;
-        case end[0] == 0:
-            paramMat[0] = 1 / begin[0];
-            paramMat[2] = 1 / end[1];
-            break;
-        case begin[1] == 0:
-            paramMat[0] = 1 / end[0];
-            paramMat[2] = 1 / begin[1];
-            break;
-        default:
-            mat2.invert(paramMat, paramMat);//逆矩阵
-            mat2.multiply(paramMat, paramMat, mat2.fromValues(1, 0, 1, 0));
-            break;
-    }
 
-    console.log(paramMat);
-    return paramMat
+function distanceByIndex(endIndex) {
+    let end = vec2.fromValues(offsetVertex[endIndex], offsetVertex[endIndex + 1]);
+    let begin = vec2.fromValues(offsetVertex[endIndex - 2 * offsetSize], offsetVertex[endIndex - 2 * offsetSize + 1]);
+    let length = vec2.distance(begin, end);
+    offsetVertex[endIndex + 4] = length;
+    offsetVertex[endIndex + 5] = offsetVertex[endIndex - 2 * offsetSize + 5] + length;
+    return length;
 }
