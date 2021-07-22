@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Add a custom style layer</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.3.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.3.1/mapbox-gl.js"></script>
+    <script src="plugins/gl-matrix-2.8.1.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://unpkg.com/three@0.126.0/build/three.min.js"></script>
+    <div id="map"></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoidGVhbWVuY2FjaGUiLCJhIjoiY2txZzcxa2NrMHB4eTJ1bnphem9lazZrYiJ9.bQ9wCbRR64Iaxgk4-l2JCw';
+        var map = window.map = new mapboxgl.Map({
+            container: 'map',
+            zoom: 5,
+            center: [25.004, 60.239],
+            style: 'mapbox://styles/mapbox/light-v10',
+            antialias: true // create the gl context with MSAA antialiasing, so custom layers are antialiased
+        });
+
+        var THREE = window.THREE;
+        let gisData = [{
+            lng: 25.004,
+            lat: 60.239
+        }, {
+            lng: 13.403,
+            lat: 52.562
+        }, {
+            lng: 30.498,
+            lat: 50.541
+        }];
+        // create a custom style layer to implement the WebGL content
+        var highlightLayer = {
+            id: 'highlight',
+            type: 'custom',
+
+            // method called when the layer is added to the map
+            // https://docs.mapbox.com/mapbox-gl-js/api/#styleimageinterface#onadd
+            onAdd: function (map, gl) {
+
+                this.camera = new THREE.Camera();
+                this.scene = new THREE.Scene();
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: map.getCanvas(),
+                    context: gl,
+                    antialias: true
+                });
+                this.renderer.autoClear = false;
+                // 模型参数
+                this.modelParam = {
+                    scale: 0,
+                    antitude: 100,//海拔
+                    u_Time: 0,//动作时间
+                    u_AnimateMatrix: new THREE.Matrix4(),
+                    arrUniforms: []
+                };
+                // 模型数据
+                this.modelData = {};
+                // 生成四棱锥模型数据
+                initModelData(this);
+                // 根据坐标数据生成点位
+                gisData.forEach(item => {
+                    let screenPoint = mapboxgl.MercatorCoordinate.fromLngLat(item, this.modelParam.antitude);
+                    this.modelParam.scale = this.modelParam.scale || screenPoint.meterInMercatorCoordinateUnits() * 10000;
+                    addModel(this, screenPoint)
+                })
+
+            },
+
+            // method fired on each animation frame
+            // https://docs.mapbox.com/mapbox-gl-js/api/#map.event:render
+            render: function (gl, matrix) {
+                gl.useProgram(this.program);
+
+                this.modelParam.u_Time += 0.01;
+                this.modelParam.u_AnimateMatrix = new THREE.Matrix4().makeRotationAxis(
+                    new THREE.Vector3(0, 0, 1),
+                    this.modelParam.u_Time
+                );
+                this.modelParam.arrUniforms.forEach(uniforms => {
+                    uniforms.u_AnimateMatrix.value = this.modelParam.u_AnimateMatrix
+                });
+
+                this.camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
+                this.renderer.resetState();
+                this.renderer.render(this.scene, this.camera);
+                map.triggerRepaint();
+            }
+        };
+
+        map.on('load', function () {
+            map.addLayer(highlightLayer, 'building');
+        });
+        // 添加模型到点位上
+        function addModel(layer, screenPoint) {
+            var vertexSource = vertexScript.textContent;
+            var fragmentSource = fragmentScript.textContent;
+
+            let uniforms = {
+                u_Sampler2D: {
+                    value: new THREE.TextureLoader().load("images/渐变色1.jpg")
+                },
+                u_ConfineMatrix: {
+                    type: 'm4',
+                    value: new THREE.Matrix4().makeTranslation(
+                        screenPoint.x,
+                        screenPoint.y,
+                        screenPoint.z
+                    ).scale(new THREE.Vector3(
+                        layer.modelParam.scale,
+                        -layer.modelParam.scale,
+                        layer.modelParam.scale
+                    ))
+                },
+                u_AnimateMatrix: {
+                    type: 'm4',
+                    value: layer.u_AnimateMatrix
+                }
+            };
+
+            uniforms.u_Sampler2D.value.wrapS = uniforms.u_Sampler2D.value.wrapT = THREE.ClampToEdgeWrapping;
+            // uniforms.u_Sampler2D.value.warpS = uniforms.u_Sampler2D.value.warpT = THREE.RepeatWrapping;
+            let material = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: vertexSource,
+                fragmentShader: fragmentSource,
+            });
+            let geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(layer.modelData.vertex, 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(layer.modelData.texCoord, 2));
+            geometry.setIndex(new THREE.Uint16BufferAttribute(layer.modelData.index, 1));
+
+            let mesh = new THREE.Mesh(geometry, material);
+            layer.scene.add(mesh);
+            layer.modelParam.arrUniforms.push(uniforms);
+        }
+        // 初始化模型数据
+        function initModelData(layer) {
+            let modelSize = {
+                width: 10,
+                height: 10,
+            };
+            let geometry = [], indexData = [], texCoord = [], normal = [];
+            let xyz = [0, 0, 0];
+            let dWidth = modelSize.width / 2;
+            geometry.push.apply(geometry, [
+                // x,y,z,
+                xyz[0], xyz[1], xyz[2],
+                xyz[0] + dWidth, xyz[1] - dWidth, xyz[2] + modelSize.height,
+                xyz[0] - dWidth, xyz[1] - dWidth, xyz[2] + modelSize.height,
+
+                xyz[0], xyz[1], xyz[2],
+                xyz[0] + dWidth, xyz[1] + dWidth, xyz[2] + modelSize.height,
+                xyz[0] + dWidth, xyz[1] - dWidth, xyz[2] + modelSize.height,
+
+                xyz[0], xyz[1], xyz[2],
+                xyz[0] - dWidth, xyz[1] + dWidth, xyz[2] + modelSize.height,
+                xyz[0] + dWidth, xyz[1] + dWidth, xyz[2] + modelSize.height,
+
+                xyz[0], xyz[1], xyz[2],
+                xyz[0] - dWidth, xyz[1] - dWidth, xyz[2] + modelSize.height,
+                xyz[0] - dWidth, xyz[1] + dWidth, xyz[2] + modelSize.height,
+
+                xyz[0] - dWidth, xyz[1] - dWidth, xyz[2] + modelSize.height,
+                xyz[0] + dWidth, xyz[1] - dWidth, xyz[2] + modelSize.height,
+                xyz[0] + dWidth, xyz[1] + dWidth, xyz[2] + modelSize.height,
+
+                xyz[0] - dWidth, xyz[1] - dWidth, xyz[2] + modelSize.height,
+                xyz[0] + dWidth, xyz[1] + dWidth, xyz[2] + modelSize.height,
+                xyz[0] - dWidth, xyz[1] + dWidth, xyz[2] + modelSize.height,
+            ]);
+            texCoord.push.apply(texCoord, [
+                // s,t
+                0.5, 0.3,
+                1.0, 0.8,
+                0.0, 0.8,
+
+                0.5, 0.3,
+                1.0, 0.8,
+                0.0, 0.8,
+
+                0.5, 0.3,
+                1.0, 0.8,
+                0.0, 0.8,
+
+                0.5, 0.3,
+                1.0, 0.8,
+                0.0, 0.8,
+
+                0.5, 0.3,
+                0.5, 0.3,
+                0.5, 0.3,
+
+                0.5, 0.3,
+                0.5, 0.3,
+                0.5, 0.3,
+            ]);
+            indexData.push.apply(indexData, [
+                0, 1, 2,
+                3, 4, 5,
+                6, 7, 8,
+                9, 10, 11,
+                12, 13, 14,
+                15, 16, 17,
+            ]);
+
+            normal.push.apply(normal, [
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1
+            ])
+            layer.modelData.vertex = geometry;
+            layer.modelData.texCoord = texCoord;
+            layer.modelData.index = indexData;
+            layer.modelData.normal = normal;
+        }
+    </script>
+    <script type="x-shader/x-vertex" id="vertexScript">
+        uniform mat4 u_AnimateMatrix;
+        uniform mat4 u_ConfineMatrix;
+        varying vec2 vuv;
+        
+        void main(){
+            gl_Position = projectionMatrix * modelViewMatrix * u_ConfineMatrix * u_AnimateMatrix * vec4(position,1.0);
+            vuv = uv;
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentScript">
+        precision highp float;
+
+        uniform sampler2D u_Sampler2D;
+        uniform float u_Time;
+
+        varying vec2 vuv;
+
+        void main(){
+            vec4 color = texture2D(u_Sampler2D, vuv);
+            gl_FragColor = color;
+        }
+    </script>
+</body>
+
+</html>
