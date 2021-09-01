@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Add a custom style layer</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.3.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.3.1/mapbox-gl.js"></script>
+    <script src="plugins/gl-matrix-2.8.1.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="../v2.3.0//turf.min.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/build/three.min.js"></script>
+    <div id="map"></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoidGVhbWVuY2FjaGUiLCJhIjoiY2txZzcxa2NrMHB4eTJ1bnphem9lazZrYiJ9.bQ9wCbRR64Iaxgk4-l2JCw';
+        var map = window.map = new mapboxgl.Map({
+            container: 'map',
+            zoom: 5,
+            center: [25.004, 60.239],
+            style: 'mapbox://styles/mapbox/light-v10',
+            antialias: true // create the gl context with MSAA antialiasing, so custom layers are antialiased
+        });
+
+        var THREE = window.THREE;
+        let gisData = [{
+            lng: 25.004,
+            lat: 60.239
+        }, {
+            lng: 13.403,
+            lat: 52.562
+        }, {
+            lng: 30.498,
+            lat: 50.541
+        }];
+        // create a custom style layer to implement the WebGL content
+        var highlightLayer = {
+            id: 'highlight',
+            type: 'custom',
+
+            // method called when the layer is added to the map
+            // https://docs.mapbox.com/mapbox-gl-js/api/#styleimageinterface#onadd
+            onAdd: function (map, gl) {
+
+                this.camera = new THREE.Camera();
+                this.scene = new THREE.Scene();
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: map.getCanvas(),
+                    context: gl,
+                    antialias: true,
+                    alpha:true
+                });
+                this.renderer.autoClear = false;
+                this.renderer.setClearColor(0x000000,0);
+                // 模型参数
+                this.modelParam = {
+                    unit: 0,
+                    screenSize:100,
+                    scaleRate:0,
+                    antitude: 1000,//海拔
+                    u_Time: 0.0,//动作时间
+                    u_Color:new THREE.Vector3(1.0,0.0,0.0),
+                    u_AnimateMatrix: new THREE.Matrix4(),
+                    arrUniforms: []
+                };
+                // 模型数据
+                this.modelData = {};
+                // 生成四棱锥模型数据
+                initModelData(this);
+                // 根据坐标数据生成点位
+                gisData.forEach(item => {
+                    let screenPoint = mapboxgl.MercatorCoordinate.fromLngLat(item, this.modelParam.antitude);
+                    this.modelParam.unit = this.modelParam.unit || screenPoint.meterInMercatorCoordinateUnits();
+                    addModel(this, screenPoint)
+                });
+                getMarkerSize();
+            },
+
+            // method fired on each animation frame
+            // https://docs.mapbox.com/mapbox-gl-js/api/#map.event:render
+            render: function (gl, matrix) {
+                gl.useProgram(this.program);
+                let scale =  this.modelParam.unit * this.modelParam.scaleRate;
+                this.modelParam.arrUniforms.forEach(uniforms => {
+                    uniforms.u_AnimateMatrix.value = this.modelParam.u_AnimateMatrix;
+                    uniforms.u_ScaleMatrix.value = new THREE.Matrix4().scale(new THREE.Vector3(
+                        scale,-scale,scale
+                    ));
+                    uniforms.u_Time.value -= 0.04;
+                });
+                this.camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
+                this.renderer.resetState();
+                this.renderer.render(this.scene, this.camera);
+                map.triggerRepaint();
+            }
+        };
+
+        map.on('load', function () {
+            window.scaleSize = 1.0;
+            map.addLayer(highlightLayer, 'building');
+            
+        });
+        map.on('zoom',function(){
+            getMarkerSize();
+        });
+
+        function getMarkerSize(){
+            let blingSize = highlightLayer.modelParam.screenSize;
+            let to = map.unproject([0,blingSize]);
+            let from = map.unproject([0,0]);
+             from = turf.point([from.lng, from.lat]);
+             to = turf.point([to.lng, to.lat]);
+             options = {units: 'kilometers'};
+             distance = turf.distance(from, to, options);
+            highlightLayer.modelParam.scaleRate = distance * 1000;
+        }
+        // 添加模型到点位上
+        function addModel(layer, screenPoint) {
+            var vertexSource = vertexScript.textContent;
+            var fragmentSource = fragmentScript.textContent;
+
+
+            let uniforms = {
+                u_TranslateMatrix: {
+                    type: 'm4',
+                    value: new THREE.Matrix4().makeTranslation(
+                        screenPoint.x,
+                        screenPoint.y,
+                        screenPoint.z
+                    )
+                },
+                u_ScaleMatrix:{
+                    type: 'm4',
+                    value: new THREE.Matrix4()
+                },
+                u_AnimateMatrix: {
+                    type: 'm4',
+                    value: layer.u_AnimateMatrix
+                },
+                u_Color:{
+                    type:'v3',
+                    value:layer.modelParam.u_Color
+                },
+                u_Time:{
+                    type:'f',
+                    value:layer.modelParam.u_Time
+                }
+            };
+
+            let material = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: vertexSource,
+                fragmentShader: fragmentSource,
+                transparent: true,
+            });
+            let geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(layer.modelData.vertex, 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(layer.modelData.texCoord,2));
+            geometry.setIndex(new THREE.Uint16BufferAttribute(layer.modelData.index, 1));
+
+            let mesh = new THREE.Mesh(geometry, material);
+            layer.scene.add(mesh);
+            layer.modelParam.arrUniforms.push(uniforms);
+        }
+        // 初始化模型数据
+        function initModelData(layer) {
+            let modelSize = {
+                width: 1,
+                height: 1,
+            };
+            let geometry = [], indexData = [], texCoord = [], normal = [];
+            let xyz = [0, 0, 0];
+            geometry.push.apply(geometry, [
+                // x,y,z
+                xyz[0]-modelSize.width/2, xyz[1] + modelSize.height/2, xyz[2],
+                xyz[0]-modelSize.width/2, xyz[1] - modelSize.height/2, xyz[2],
+                xyz[0]+modelSize.width/2, xyz[1] - modelSize.height/2, xyz[2],
+
+                xyz[0]-modelSize.width/2, xyz[1] + modelSize.height/2, xyz[2],
+                xyz[0]+modelSize.width/2, xyz[1] - modelSize.height/2, xyz[2],
+                xyz[0]+modelSize.width/2, xyz[1] + modelSize.height/2, xyz[2],
+            ]);
+            texCoord.push.apply(texCoord, [
+                // s,t
+                0.0, 1.0,
+                0.0, 0.0,
+                1.0, 0.0,
+
+                0.0, 1.0,
+                1.0, 0.0,
+                1.0, 1.0,
+            ]);
+            indexData.push.apply(indexData, [
+                0, 1, 2,
+                3, 4, 5
+            ]);
+
+            normal.push.apply(normal, [
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1
+            ])
+            layer.modelData.vertex = geometry;
+            layer.modelData.texCoord = texCoord;
+            layer.modelData.index = indexData;
+            layer.modelData.normal = normal;
+        }
+    </script>
+    <script type="x-shader/x-vertex" id="vertexScript">
+        uniform mat4 u_AnimateMatrix;
+        uniform mat4 u_TranslateMatrix;
+        uniform mat4 u_ScaleMatrix;
+        varying vec2 vuv;
+        void main(){
+            gl_Position = projectionMatrix *  u_TranslateMatrix * u_ScaleMatrix * u_AnimateMatrix * vec4(position,1.0);
+            vuv = uv;
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentScript">
+        precision highp float;
+
+        uniform float u_Time;
+        uniform vec3 u_Color;
+        varying vec2 vuv;
+        void main(){
+            float dis = distance(vuv, vec2(0.5,0.5));
+            float dis_sin = sin(30.0*dis + u_Time);
+            float dis_opa = clamp(1.0 - dis/0.5, 0.6, 1.0);
+            if(dis<=0.5 && dis_sin>=0.0){
+                gl_FragColor=vec4(u_Color,1.0 - dis/0.5);
+            }else{
+                discard;
+            }
+        }
+    </script>
+</body>
+
+</html>
