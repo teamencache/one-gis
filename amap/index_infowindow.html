@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        #mapBox{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: 0;
+        }
+    </style>
+    <title>Document</title>
+</head>
+<body>
+    <div id="mapBox"></div>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=b698e8fc43715a16053e9fa156601706"></script>
+    
+    <script>
+     var map = new AMap.Map("mapBox", {
+        center: [116.395577, 39.892257],
+        zoom: 14
+    });
+
+    let marker = new AMap.Marker({
+        map: map,
+        position: [116.395577, 39.892257],
+        content: getContent(),
+        extData:{name:'点位名称',JD:116.395577, WD:39.892257}
+    });
+    //单独添加事件
+    marker.on('click', handleClick);
+    marker.on('mouseover',handleMouseover);
+    marker.on('mouseout',handleMouseout);
+
+    //获取点位content
+    function getContent(attr){
+        return '<img src="../images/aqi1.png">';
+    }
+
+    //事件处理
+    let info;
+    function handleClick(evt){
+        let attr = evt.target.w.extData;
+        info && info.close();
+        info = new AMap.InfoWindow({
+            position:[attr.JD, attr.WD],
+            isCustom:true,
+            content:`<div style="background:#fff;">${attr.name}</div>`,
+            offset:new AMap.Pixel(10,-30),
+            retainWhenClose:false
+        });
+        info.open(map);
+    }
+
+    function handleMouseover(evt){
+        let attr = evt.target.w.extData;
+        info = new AMap.InfoWindow({
+            isCustom:true,
+            position:[attr.JD, attr.WD],
+            content:`<div>${attr.name}</div>`,
+            offset:new AMap.Pixel(10,-30),
+            retainWhenClose:false
+        });
+        info.open(map);
+    }
+
+    function handleMouseout(evt){
+        info && info.close();
+    }
+   
+    </script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德点位</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .powergis-tooltip {
+            /* display: none; */
+            padding: 5px;
+            border-radius: 3px;
+            white-space: nowrap;
+            background-color: #b7b7b7;
+            z-index: -1;
+        }
+
+        .powergis-tooltip.powergis-tooltip-over {
+            /* display: block; */
+            z-index: 999;
+        }
+
+        .powergis-tooltip-ratateX {
+            animation: tooltipRotate 0.5s linear;
+        }
+
+        @keyframes tooltipRotate {
+            0% {
+                transform: rotateX(90deg) scale(0);
+            }
+
+            100% {
+                transform: rotateX(0deg) scale(1);
+            }
+        }
+
+        .powergis-infoWindow {
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+            background: #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            z-index: 1000;
+            display: none;
+        }
+
+        .powergis-infoWindow .infowinodw-head {
+            height: 40px;
+            background: #3f88d4;
+            position: relative;
+        }
+
+        .powergis-infoWindow .infowinodw-head .infowinodw-title {
+            font-size: 16px;
+            color: #fff;
+            line-height: 40px;
+            display: inline-block;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            position: absolute;
+            left: 15px;
+            right: 40px;
+        }
+
+        .powergis-infoWindow .infowinodw-head .infowinodw-close {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            right: 10px;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+            background: url(/smaples/powergis/images/gis-info-close-white.svg) no-repeat center/100% 100%;
+            cursor: pointer;
+        }
+
+        .powergis-infoWindow .infowindow-body {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 40px;
+            bottom: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script src="http://202.104.140.38:81/powergis/V1.1/plugin/jquery-1.11.1.min.js"></script>
+    <script src="http://202.104.140.38:81/powergis/V1.1/powergis_GD.js"></script>
+    <script>
+        let mapOption = {
+            resizeEnable: true,
+            rotateEnable: true,
+            pitchEnable: true,
+            zoom: 10,
+            pitch: 80,
+            rotation: 0,
+            viewMode: '2D', //开启3D视图,默认为关闭
+            buildingAnimation: true, //楼块出现是否带动画
+            expandZoomRange: true,
+            zooms: [3, 20],
+            center: [117.435732, 31.855936]
+        };
+
+        let map = PowerGis.addMap('map', mapOption);
+        let totals = 10;
+        let resultData = [];
+        let markers = [];
+        while (totals >= 0) {
+            let item = {};
+            item.JD = mapOption.center[0] + 0.01 * totals;
+            item.WD = mapOption.center[1] + 0.01 * totals;
+            item.title = '测试点_' + totals;
+            item.SZLB = totals % 6;
+            resultData.push(item);
+            totals--;
+        }
+
+        /* function getContent(item) {
+            var imgUrl = getImageUrl(item);
+            return '<div><img src="' + imgUrl + '"></div>'
+        }
+
+        function getImageUrl(item) {
+            let imgUrl = "../../smaples/powergis/images/L2.png";
+            if (item.SZLB % 2 == 0) {
+                imgUrl = "../../smaples/powergis/images/L3.png";
+            }
+            return imgUrl;
+        } */
+        PowerGis.initTooltip();
+        PowerGis.initInforWindow();
+
+        PowerGis.addPoint(map, '点位', resultData, {
+            isClear: true,
+            // title: 'title',
+            getTitle: function (item) {
+                return item.title
+            },
+            // icon: "/smaples/powergis/images/L2.png",
+            // getIcon:function(item){return "/smaples/powergis/images/L2.png"},
+            // content: '',
+            getContent: function (item) {
+                return '<img style="width:100%;" src="../../../static/gis/images/air/wz1.png">'
+            },
+            callback: function () { },
+            size: {
+                width: 21,
+                height: 36
+            },
+            handleOverlayClick: function (e) {
+                let item = e.target.w.extData;
+                /* let content = '<p>' + item.title + '</p>';
+                let bounds = {
+                    width: '920px',
+                    height: '606px'
+                };
+                GisInforWindow.setBounds(bounds).setTitle('点位详情').setContent(content);
+                GisInforWindow.open(); */
+            },
+            option: {
+                // angle: 0,
+                animation: 'AMAP_ANIMATION_NONE' //'AMAP_ANIMATION_BOUNCE','AMAP_ANIMATION_DROP'
+            }
+        })
+    </script>
+</body>
+
+</html>

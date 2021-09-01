@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>高德地图预处理图片插值效果</title>
+    <link href="css/zui-theme-blue.css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+
+    <script src="http://202.104.140.38:81/powergis/V1.1/plugin/jquery-1.11.1.min.js"></script>
+    <script src="http://202.104.140.38:81/powergis/V1.1/powergis_GD.js"></script>
+    </script>
+
+
+
+</head>
+
+<body class="tundra">
+    <!--地图容器-->
+    <div id="mapDiv"></div>
+    <!--地图控制-->
+
+    <script type="text/javascript">
+        let option = {
+            resizeEnable: true,
+            rotateEnable: true,
+            pitchEnable: true,
+            zoom: 10,
+            pitch: 80,
+            rotation: 0,
+            viewMode: '2D', //开启3D视图,默认为关闭
+            buildingAnimation: true, //楼块出现是否带动画
+            expandZoomRange: true,
+            zoom: 4, //级别
+            center: [121.51685500035792, 29.54805599978456]
+        };
+        let map = PowerGis.addMap('mapDiv', option);
+
+        /* map.on('complete', function () {
+            // 地图图块加载完成后触发
+        }); */
+        let layerOption = {
+            url: "../images/test5.png",
+            opacity: 0.8,
+            southWest: [73.502355, 18.221718],
+            northEast: [135.045670, 53.703624]
+        };
+
+        let imageLayer = PowerGis.addImageLayer(map, layerOption);
+    </script>
+</body>
+
+</html>

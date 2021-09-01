@@ -40,11 +40,12 @@ let fragmentStr = `
 
     void main(){
         float red =0.0;
-        if(v_VerticalDirect > 0.0){
+        red = sin(50.0 * v_LengthBefore / u_TotalLength_p + u_Time);
+        /* if(v_VerticalDirect > 0.0){
             red = sin(50.0 * v_LengthBefore / u_TotalLength_p + u_Time);
         }else{
             red = sin(50.0 * v_LengthBefore / u_TotalLength_n + u_Time);
-        }
+        } */
         gl_FragColor = vec4(abs(red),1.0,0,1.0);
     }
 `;
@@ -105,14 +106,11 @@ let offsetVertex = [];
 let offsetIndex = [];
 let vertexData = [
     -5.0, 10.0, 0,
-    0, 5.0, 0,
-    3, -5.0, 0,
-    -15, -15, 0,
-    - 15, 20, 0,
-    15, 5, 0,
-    10, 20, 0,
-    5, 20, 0,
+    0, 10.0, 0,
+    0, -10.0, 0,
     10, -10, 0,
+    10, 15, 0,
+    -5, 15, 0,
 ];
 
 (function main() {
@@ -294,7 +292,7 @@ function initLinePlaneVertex() {
         lineIndex && initIntersection(lineIndex);
     }
     for (let lineIndex = 0; lineIndex <= lineSegments; lineIndex++) {
-        lineIndex && caculateLineLength(lineIndex);
+        lineIndex && caculateLineLength(lineIndex, lineSegments);
     }
 }
 // 沿垂直线条方向扩展出有宽度的线
@@ -322,8 +320,7 @@ function initNormal(data, lineIndex, lineSegments) {
     let dy2 = -dy1;
     /* let dx2 = lineWidth / 2 * Math.cos(radianX - Math.PI / 2);
     let dy2 = lineWidth / 2 * Math.sin(radianX - Math.PI / 2); */
-    //[x,y,z,rotateDirect,length, totalLegth, a_TexCoord]
-    let fixedPosition = [//x,y,z,side,
+    let fixedPosition = [//x,y,z,side,length,lengthBefore,t,s
         currBegin[0] + dx1, currBegin[1] + dy1, 0, 1.0, 0.0, 0.0, 0.0,
         currBegin[0] + dx2, currBegin[1] + dy2, 0, -1.0, 0.0, 0.0, 0.0,
         currEnd[0] + dx1, currEnd[1] + dy1, 0, 1.0, 0.0, 0.0, 0.0,
@@ -387,14 +384,14 @@ function initIntersection(lineIndex) {
         Array.prototype.push.apply(offsetIndex, [
             lineIndex * 4 - 2, lineIndex * 4 - 1, lineIndex * 4 + 0
         ]);
-
     } else {// 逆时针
         offsetVertex[currIndex + 0] = intersectionVertex[0];
         offsetVertex[currIndex + 1] = intersectionVertex[2];
         offsetVertex[lastIndex + offsetSize * 2 + 0] = intersectionVertex[0];
         offsetVertex[lastIndex + offsetSize * 2 + 1] = intersectionVertex[2];
         Array.prototype.push.apply(offsetIndex, [
-            lineIndex * 4 - 1, lineIndex * 4, lineIndex * 4 + 1
+            // lineIndex * 4 - 1, lineIndex * 4, lineIndex * 4 + 1
+            lineIndex * 4 - 2, lineIndex * 4 - 1, lineIndex * 4 + 1
         ]);
     }
 }
@@ -421,25 +418,30 @@ function caculateLineIntersection(begin, end) {
     return paramMat
 }
 
-function caculateLineLength(lineIndex) {
-    let endIndex = lineIndex * 4 * offsetSize;
-    let length = distanceByIndex(endIndex - offsetSize * 2);
-    variable.u_TotalLength_p.value += length;
-
-    length = distanceByIndex(endIndex - offsetSize);
+function caculateLineLength(lineNumber, lineSegments) {
+    let nextLineStartIndex = lineNumber * 4 * offsetSize;
+    let length = distanceByIndex(nextLineStartIndex - offsetSize * 1);
     variable.u_TotalLength_n.value += length;
 
-    distanceByIndex(endIndex);
+    length = distanceByIndex(nextLineStartIndex - offsetSize * 2);
     variable.u_TotalLength_p.value += length;
 
-    distanceByIndex(endIndex + offsetSize);
+    if (lineSegments <= lineNumber) {
+        return
+    }
+
+    length = distanceByIndex(nextLineStartIndex);
+    variable.u_TotalLength_p.value += length;
+
+    length = distanceByIndex(nextLineStartIndex + offsetSize);
     variable.u_TotalLength_n.value += length;
 }
-
+// endIndex：后一个点的索引
 function distanceByIndex(endIndex) {
     let end = vec2.fromValues(offsetVertex[endIndex], offsetVertex[endIndex + 1]);
-    let begin = vec2.fromValues(offsetVertex[endIndex - 2 * offsetSize], offsetVertex[endIndex - 2 * offsetSize + 1]);
-    let length = vec2.distance(begin, end);
+    let start = vec2.fromValues(offsetVertex[endIndex - 2 * offsetSize], offsetVertex[endIndex - 2 * offsetSize + 1]);
+    let length = vec2.distance(start, end);
+    length = 3.0;
     offsetVertex[endIndex + 4] = length;
     offsetVertex[endIndex + 5] = offsetVertex[endIndex - 2 * offsetSize + 5] + length;
     return length;

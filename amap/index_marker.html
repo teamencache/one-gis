@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        #mapBox{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: 0;
+        }
+    </style>
+    <title>Document</title>
+</head>
+<body>
+    <div id="mapBox"></div>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=b698e8fc43715a16053e9fa156601706"></script>
+    
+    <script>
+     var map = new AMap.Map("mapBox", {
+        center: [116.395577, 39.892257],
+        zoom: 14
+    });
+
+    var path = [
+        [116.362209, 39.887487],
+        [116.422897, 39.878002],
+        [116.372105, 39.90651],
+        [116.428945, 39.89663]
+    ];
+
+    let markers = path.map((item,index)=>{
+        let marker = new AMap.Marker({
+            map: map,//单独添加到地图
+            position: [item[0], item[1]],
+            content: getContent(item),
+            extData:{index:index}
+        });
+        //单独添加事件
+        // marker.on('click', handleClick);
+        return marker
+    });
+    //marker批量添加到地图
+    // map.add(markers);
+    
+    // overlayGroup添加
+    /* let overlayGroup = new AMap.OverlayGroup(markers);
+    map.add(overlayGroup);
+    overlayGroup.on('click', handleClick); */
+
+    //获取点位content
+    function getContent(attr){
+        return '<img src="../images/aqi1.png">';
+    }
+    //事件处理
+    function handleClick(evt){
+        let attr = evt.target.w.extData;
+        console.log(attr);
+    }
+    //移除多个
+    function removeMarkers(){
+        map.remove(markers);
+    }
+    // 清除指定点
+    function clearMarker() {
+        markers[0].setMap(null);
+    }
+    // 缩放地图到合适的视野级别
+    map.setFitView(markers)
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德线条</title>
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script src="http://202.104.140.38:81/powergis/V1.1/plugin/jquery-1.11.1.min.js"></script>
+    <script src="http://202.104.140.38:81/powergis/V1.1/powergis_GD.js"></script>
+    <script>
+        let mapOption = {
+            resizeEnable: true,
+            rotateEnable: true,
+            pitchEnable: true,
+            zoom: 10,
+            pitch: 80,
+            rotation: 0,
+            viewMode: '2D', //开启3D视图,默认为关闭
+            buildingAnimation: true, //楼块出现是否带动画
+            expandZoomRange: false,
+            zooms: [3, 20],
+            center: [117.435732, 31.855936]
+        };
+
+        let map = PowerGis.addMap('map', mapOption);
+        $.getJSON('../data/合肥geo.json', function(res) {
+            // PowerGis.addLine(map, '折线', res.features, false);
+            //高级测试
+            PowerGis.addLine(map, '折线', res.features, {
+                isClear: false,
+                // lineColor: 'red',
+                // outlineColor: 'blue',
+                // getLineColor: function (attr) {
+                //     return 'blue';
+                // },
+                // getOutlineColor: function (attr) {
+                //     return 'red';
+                // },
+                callback: function() {
+
+                },
+                option: {
+                    showDir: false,
+                }
+            });
+        })
+    </script>
+</body>
+
+</html>

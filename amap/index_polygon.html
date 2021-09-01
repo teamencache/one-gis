@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        #mapBox{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: 0;
+        }
+    </style>
+    <title>Document</title>
+</head>
+<body>
+    <div id="mapBox"></div>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=b698e8fc43715a16053e9fa156601706"></script>
+    
+    <script>
+    var map = new AMap.Map("mapBox", {
+        /* viewMode:'3D',
+        pitch: 80, */
+        center: [116.400274, 39.905812],
+        zoom: 14
+    });
+    
+    //内轮廓
+    var path = [
+        [116.403322, 39.920255],
+        [116.410703, 39.897555],
+        [116.402292, 39.892353],
+        [116.389846, 39.891365]
+    ]
+    //外轮廓
+      let zzOuter = [
+            new AMap.LngLat(-360, 90, true),
+            new AMap.LngLat(-360, -90, true),
+            new AMap.LngLat(360, -90, true),
+            new AMap.LngLat(360, 90, true)
+        ]
+
+    
+    var polygon = new AMap.Polygon({
+        path: [zzOuter,path],
+        strokeColor: "#FF33FF", 
+        strokeWeight: 6,
+        strokeOpacity: 0.2,
+        fillOpacity: 0.4,
+        fillColor: '#1791fc',
+        zIndex: 50,
+    })
+
+    map.add(polygon)
+    // 缩放地图到合适的视野级别
+    // map.setFitView([ polygon ])
+    </script>
+</body>
+</html>

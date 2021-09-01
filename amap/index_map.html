@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初始化地图</title>
+    <style>
+        #mapBox{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: 0;
+        }
+    </style>
+    
+</head>
+<body>
+    <div id="mapBox"></div>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=b698e8fc43715a16053e9fa156601706"></script>
+    <script>
+        let map = new AMap.Map('mapBox');
+    </script>
+</body>
+</html>

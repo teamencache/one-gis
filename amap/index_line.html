@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        #mapBox{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: 0;
+        }
+    </style>
+    <title>Document</title>
+</head>
+<body>
+    <div id="mapBox"></div>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=b698e8fc43715a16053e9fa156601706"></script>
+    
+    <script>
+     var map = new AMap.Map("mapBox", {
+        center: [116.395577, 39.892257],
+        zoom: 14
+    });
+
+    var path = [
+        [116.362209, 39.887487],
+        [116.422897, 39.878002],
+        [116.372105, 39.90651],
+        [116.428945, 39.89663]
+    ];
+
+    var polyline = new AMap.Polyline({
+        path: path,
+        isOutline: true,
+        outlineColor: '#ffeeff',
+        borderWeight: 3,
+        strokeColor: "#3366FF", 
+        strokeOpacity: 1,
+        strokeWeight: 6,
+        // 折线样式还支持 'dashed'
+        strokeStyle: "solid",
+        // strokeStyle是dashed时有效
+        strokeDasharray: [10, 5],
+        lineJoin: 'round',
+        lineCap: 'round',
+        zIndex: 50,
+    })
+
+    polyline.setMap(map)
+    // 缩放地图到合适的视野级别
+    map.setFitView([ polyline ])
+    </script>
+</body>
+</html>

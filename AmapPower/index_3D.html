@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德地图[地图底图->3D地图]</title>
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+
+
+</head>
+
+
+<body>
+    <div id="map"></div>
+
+    <script src="http://202.104.140.38:81/powergis/V1.1/plugin/jquery-1.11.1.min.js"></script>
+    <script src="http://202.104.140.38:81/powergis/V1.1/powergis_GD.js"></script>
+
+    <script>
+        let option = {
+            resizeEnable: true,
+            rotateEnable: true,
+            pitchEnable: true,
+            zoom: 17,
+            pitch: 80,
+            rotation: -15,
+            viewMode: '3D', //开启3D视图,默认为关闭
+            buildingAnimation: true, //楼块出现是否带动画
+            expandZoomRange: true,
+            zooms: [3, 20],
+            center: [116.333926, 39.997245]
+        }
+
+        let map = PowerGis.addMap('map', option);
+    </script>
+</body>
+
+</html>

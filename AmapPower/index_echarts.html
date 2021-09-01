@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>echarts统计</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        
+        html,
+        body,
+        #map {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .powergis-tooltip {
+            /* display: none; */
+            padding: 5px;
+            border-radius: 3px;
+            white-space: nowrap;
+            background-color: #b7b7b7;
+            z-index: -1;
+        }
+        
+        .powergis-tooltip.powergis-tooltip-over {
+            /* display: block; */
+            z-index: 999;
+        }
+        
+        .powergis-tooltip-ratateX {
+            animation: tooltipRotate 0.5s linear;
+        }
+        
+        @keyframes tooltipRotate {
+            0% {
+                transform: rotateX(90deg) scale(0);
+            }
+            100% {
+                transform: rotateX(0deg) scale(1);
+            }
+        }
+        
+        .powergis-infoWindow {
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+            background: #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .powergis-infoWindow .infowinodw-head {
+            height: 40px;
+            background: #3f88d4;
+            position: relative;
+        }
+        
+        .powergis-infoWindow .infowinodw-head .infowinodw-title {
+            font-size: 16px;
+            color: #fff;
+            line-height: 40px;
+            display: inline-block;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            position: absolute;
+            left: 15px;
+            right: 40px;
+        }
+        
+        .powergis-infoWindow .infowinodw-head .infowinodw-close {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            right: 10px;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+            background: url(/smaples/powergis/images/gis-info-close-white.svg) no-repeat center/100% 100%;
+            cursor: pointer;
+        }
+        
+        .powergis-infoWindow .infowindow-body {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 40px;
+            bottom: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script src="../plugin/echarts.common.min.js"></script>
+    <script src="http://202.104.140.38:81/powergis/V1.1/plugin/jquery-1.11.1.min.js"></script>
+    <script src="http://202.104.140.38:81/powergis/V1.1/powergis_GD.js"></script>
+    <script>
+        let mapOption = {
+            resizeEnable: true,
+            rotateEnable: true,
+            pitchEnable: true,
+            zoom: 10,
+            pitch: 80,
+            rotation: -15,
+            viewMode: '2D', //开启3D视图,默认为关闭
+            buildingAnimation: true, //楼块出现是否带动画
+            expandZoomRange: true,
+            zooms: [3, 20],
+            center: [117.67517, 32.08735]
+        };
+
+        let map = PowerGis.addMap('map', mapOption);
+        let totals = 3;
+        let resultData = [];
+        let markers = [];
+        while (totals >= 0) {
+            let item = {};
+            item.JD = mapOption.center[0] + 0.1 * totals;
+            item.WD = mapOption.center[1] + 0.1 * totals;
+            item.title = '测试点_' + totals;
+            item.value = (Math.random() * 100).toFixed(2);
+            item.name = '直接访问';
+            item.value2 = 100 - item.value;
+            item.name2 = '邮件营销';
+            item.XH = 'XH_' + totals;
+            resultData.push(item);
+            totals--;
+        }
+
+
+        /* function getContent(item) {
+            var imgUrl = getImageUrl(item);
+            return '<div><img src="' + imgUrl + '"></div>'
+        }
+
+        function getImageUrl(item) {
+            let imgUrl = "/smaples/powergis/images/L2.png";
+            if (item.SZLB % 2 == 0) {
+                imgUrl = "/smaples/powergis/images/L3.png";
+            }
+            return imgUrl;
+        } */
+
+        /* PowerGis.initTooltip();
+        PowerGis.initInforWindow(); */
+        PowerGis.addPoint(map, '点位', resultData, {
+            isClear: true,
+            // title: 'title',
+            getTitle: function(item) {
+                return item.title
+            },
+            // content: '',
+            getContent: function(item) {
+                return '<div style="width:100%;height:100%;" id="' + item.XH + '"></div>'
+            },
+            callback: function() {},
+            size: {
+                width: 100,
+                height: 100
+            },
+            handleOverlayClick: function(e) {
+                let item = e.target.w.extData;
+                // let content = '<p>' + item.title + '</p>';
+                // let bounds = {
+                //     width: '920px',
+                //     height: '606px'
+                // };
+                // GisInforWindow.setBounds(bounds).setTitle('点位详情').setContent(content);
+                // GisInforWindow.open();
+            }
+        })
+
+        map.on('complete', function() {
+            // 地图图块加载完成后触发
+            resultData.forEach(item => {
+                let node = document.getElementById(item.XH);
+                setEchart(node, item);
+            })
+        });
+
+        function setEchart(node, item) {
+            let option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br />{b}: {c} ({d}%)'
+                },
+                series: [{
+                    name: '访问来源',
+                    type: 'pie',
+                    radius: ['50%', '70%'],
+                    avoidLabelOverlap: false,
+                    label: {
+                        show: false,
+                        position: 'center'
+                    },
+                    labelLine: {
+                        show: false
+                    },
+                    data: [{
+                        value: item.value,
+                        name: item.name
+                    }, {
+                        value: item.value2,
+                        name: item.name2
+                    }]
+                }]
+            };
+
+            node.innerHTML = '';
+            let myChart = echarts.init(node);
+            myChart.setOption(option, true);
+            return node;
+        }
+    </script>
+</body>
+
+</html>

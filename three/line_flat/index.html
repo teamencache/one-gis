@@ -1,35 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js webgl - lines - fat</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<link type="text/css" rel="stylesheet" href="http://localhost:8080/three/examples/main.css">
-	</head>
 
-	<body>
+<head>
+	<title>three.js webgl - lines - fat</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="http://localhost:8080/three/examples/main.css">
+</head>
 
-		<div id="container"></div>
+<body>
 
-		<div id="info"><a href="https://threejs.org" target="_blank">three.js</a> - fat lines</div>
+	<div id="container"></div>
 
-		<!-- 官方虚线实例，使用的是希尔伯特曲线
-		<script type="module" src="line_flat.js"></script> -->
-		<!-- 网络示例：自定义材质 -->
-		<!-- <script type="module" src="customMateria.js"></script> -->
-		<!-- 实现虚线流动效果 -->
-		<!-- <script type="module" src="line_dashed_flow.js"></script> -->
-		<!-- GeoJSON流动效果 -->
-		
-		<script type="module">
-			import * as THREE from "http://localhost/three/build/three.module.js";
-			import { OrbitControls } from "http://localhost/three/examples/jsm/controls/OrbitControls.js";
-			import Stats from "http://localhost/three/examples/jsm/libs/stats.module.js";
-			import { GeometryUtils } from "http://localhost/three/examples/jsm/utils/GeometryUtils.js";
-			window.OrbitControls = OrbitControls;
-		</script>
-		
-		<script id="fragmentShader_lineDashed" type="x-shader/x-fragmentShader">
+	<div id="info"><a href="https://threejs.org" target="_blank">three.js</a> - fat lines</div>
+
+	<!-- 官方虚线实例，使用的是希尔伯特曲线 -->
+	<script type="module" src="line_flat.js"></script>
+	<!-- 网络示例：自定义材质 -->
+	<!-- <script type="module" src="customMateria.js"></script> -->
+	<!-- 实现虚线流动效果 -->
+	<!-- <script type="module" src="line_dashed_flow.js"></script> -->
+	<!-- GeoJSON流动效果 -->
+
+	<script type="module">
+		import * as THREE from "http://localhost/three/build/three.module.js";
+		import { OrbitControls } from "http://localhost/three/examples/jsm/controls/OrbitControls.js";
+		import Stats from "http://localhost/three/examples/jsm/libs/stats.module.js";
+		import { GeometryUtils } from "http://localhost/three/examples/jsm/utils/GeometryUtils.js";
+		window.OrbitControls = OrbitControls;
+	</script>
+
+	<script id="fragmentShader_lineDashed" type="x-shader/x-fragmentShader">
 			//自定义
 			varying vec3 v_customColor;
 			uniform float customOffset;
@@ -82,7 +83,7 @@
 
 			}
 		</script>
-		<script id="vertexShader_lineDashed" type="x-shader/x-vertexShader">
+	<script id="vertexShader_lineDashed" type="x-shader/x-vertexShader">
 			//自定义
 			uniform vec3 customColor;
 			varying vec3 v_customColor;
@@ -117,16 +118,16 @@
 				#include <fog_vertex>
 			}
 		</script>
-		<script id="fragmentShader" type="text/shaderShader-linedashed_frag">
-			
+	<script id="fragmentShader" type="text/shaderShader-linedashed_frag">
+
 		</script>
-		<script id="vertexShader" type="text/vertexShader-linedashed_vert">
-			
+	<script id="vertexShader" type="text/vertexShader-linedashed_vert">
+
 		</script>
-		<script src="http://localhost/three/build/three.js"></script>
-		<script src="../plugins/d3.js"></script>
-		<script src="../plugins/jquery-1.11.1.min.js"></script>
-		<script src="geo_dashed_flow.js"></script>
-	</body>
-	
+	<script src="http://localhost/three/build/three.js"></script>
+	<script src="../plugins/d3.js"></script>
+	<script src="../plugins/jquery-1.11.1.min.js"></script>
+	<!-- <script src="geo_dashed_flow.js"></script> -->
+</body>
+
 </html>
