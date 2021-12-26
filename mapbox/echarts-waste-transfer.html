@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>echarts-危废转移图</title>
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+    <script>
+        let GisServerGlobalConstant = {
+            gisApiHost: "http://202.104.140.38:81"
+        }
+    </script>
+</head>
+
+
+<body>
+    <div id="map"></div>
+
+    <script src="http://202.104.140.38:81/powergis/V1.1/plugin/jquery-1.11.1.min.js"></script>
+    <script src="http://202.104.140.38:81/powergis/V1.1/powergis.js"></script>
+
+    <script>
+        PowerGis.initLoad(initLoadEnd);
+
+        //加载完成
+        function initLoadEnd(params) {
+
+            window.map = PowerGis.addMap("map", {
+                logo: false,
+                basemap: "dark-gray",
+                center: [110, 33],
+                zoom: 5
+            });
+
+            $.get('/one-gis/resource/data/scatter-data.json', function(data) {
+                addChartToMap(data);
+            });
+
+        }
+
+        //将echart 图集成到地图
+        function addChartToMap(datas) {
+
+            var lineData = [
+                [{
+                    name: '产废盟市：呼和浩特市<br />接收盟市：包头市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：35.84吨',
+                    coord: [
+                        111.7085,
+                        40.026283
+                    ]
+                }, {
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }],
+                [{
+                    name: '产废盟市：包头市<br />接收盟市：乌海市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：742.74吨',
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }, {
+                    coord: [
+                        106.800125,
+                        39.261154
+                    ]
+                }],
+                [{
+                    name: '产废盟市：包头市<br />接收盟市：赤峰市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：97.31吨',
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }, {
+                    coord: [
+                        118.35829081632653,
+                        43.052665816326535
+                    ]
+                }],
+                [{
+                    name: '产废盟市：包头市<br />接收盟市：通辽市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：1328.6吨',
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }, {
+                    coord: [
+                        121.553257,
+                        43.081657
+                    ]
+                }],
+                [{
+                    name: '产废盟市：赤峰市<br />接收盟市：通辽市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：219吨',
+                    coord: [
+                        118.35829081632653,
+                        43.052665816326535
+                    ]
+                }, {
+                    coord: [
+                        121.553257,
+                        43.081657
+                    ]
+                }],
+                [{
+                    name: '产废盟市：鄂尔多斯市<br />接收盟市：包头市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：9.7吨',
+                    coord: [
+                        107.66220238095238,
+                        38.5443324829932
+                    ]
+                }, {
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }],
+                [{
+                    name: '产废盟市：鄂尔多斯市<br />接收盟市：乌海市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：66066.36吨',
+                    coord: [
+                        107.66220238095238,
+                        38.5443324829932
+                    ]
+                }, {
+                    coord: [
+                        106.800125,
+                        39.261154
+                    ]
+                }],
+                [{
+                    name: '产废盟市：鄂尔多斯市<br />接收盟市：巴彦淖尔市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：1040.18吨',
+                    coord: [
+                        107.66220238095238,
+                        38.5443324829932
+                    ]
+                }, {
+                    coord: [
+                        106.590105,
+                        40.759264
+                    ]
+                }],
+                [{
+                    name: '产废盟市：呼伦贝尔市<br />接收盟市：通辽市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：367.92吨',
+                    coord: [
+                        119.960137,
+                        49.82871
+                    ]
+                }, {
+                    coord: [
+                        121.553257,
+                        43.081657
+                    ]
+                }],
+                [{
+                    name: '产废盟市：巴彦淖尔市<br />接收盟市：包头市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：49.1吨',
+                    coord: [
+                        106.590105,
+                        40.759264
+                    ]
+                }, {
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }],
+                [{
+                    name: '产废盟市：乌兰察布市<br />接收盟市：包头市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：42吨',
+                    coord: [
+                        112.00442176870747,
+                        41.70900085034014
+                    ]
+                }, {
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }],
+                [{
+                    name: '产废盟市：兴安盟<br />接收盟市：通辽市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：2吨',
+                    coord: [
+                        121.027297,
+                        46.092043
+                    ]
+                }, {
+                    coord: [
+                        121.553257,
+                        43.081657
+                    ]
+                }],
+                [{
+                    name: '产废盟市：锡林郭勒盟<br />接收盟市：呼和浩特市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：2.2吨',
+                    coord: [
+                        114.23686224489795,
+                        43.548924319727895
+                    ]
+                }, {
+                    coord: [
+                        111.7085,
+                        40.026283
+                    ]
+                }],
+                [{
+                    name: '产废盟市：锡林郭勒盟<br />接收盟市：包头市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：35吨',
+                    coord: [
+                        114.23686224489795,
+                        43.548924319727895
+                    ]
+                }, {
+                    coord: [
+                        109.91917517006803,
+                        41.91752551020408
+                    ]
+                }],
+                [{
+                    name: '产废盟市：锡林郭勒盟<br />接收盟市：赤峰市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：0.48吨',
+                    coord: [
+                        114.23686224489795,
+                        43.548924319727895
+                    ]
+                }, {
+                    coord: [
+                        118.35829081632653,
+                        43.052665816326535
+                    ]
+                }],
+                [{
+                    name: '产废盟市：阿拉善盟<br />接收盟市：乌海市<br />年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;份：2014<br />接收总量：5206.58吨',
+                    coord: [
+                        101.119559,
+                        40
+                    ]
+                }, {
+                    coord: [
+                        106.800125,
+                        39.261154
+                    ]
+                }]
+            ];
+            var pointData = [{
+                name: '呼和浩特市',
+                value: [
+                    111.7085,
+                    40.026283,
+                    5
+                ]
+            }, {
+                name: '包头市',
+                value: [
+                    109.91917517006803,
+                    41.91752551020408,
+                    15
+                ]
+            }, {
+                name: '乌海市',
+                value: [
+                    106.800125,
+                    39.261154,
+                    25
+                ]
+            }, {
+                name: '赤峰市',
+                value: [
+                    118.35829081632653,
+                    43.052665816326535,
+                    20
+                ]
+            }, {
+                name: '通辽市',
+                value: [
+                    121.553257,
+                    43.081657,
+                    13
+                ]
+            }, {
+                name: '鄂尔多斯市',
+                value: [
+                    107.66220238095238,
+                    38.5443324829932,
+                    8
+                ]
+            }, {
+                name: '巴彦淖尔市',
+                value: [
+                    106.590105,
+                    40.759264,
+                    4
+                ]
+            }, {
+                name: '呼伦贝尔市',
+                value: [
+                    119.960137,
+                    49.82871,
+                    14
+                ]
+            }, {
+                name: '乌兰察布市',
+                value: [
+                    112.00442176870747,
+                    41.70900085034014,
+                    23
+                ]
+            }, {
+                name: '兴安盟',
+                value: [
+                    121.027297,
+                    46.092043,
+                    3
+                ]
+            }, {
+                name: '锡林郭勒盟',
+                value: [
+                    114.23686224489795,
+                    43.548924319727895,
+                    6
+                ]
+            }, {
+                name: '阿拉善盟',
+                value: [
+                    101.119559,
+                    40,
+                    18
+                ]
+            }];
+            let option = {
+                tooltip: {
+                    trigger: 'item'
+                },
+                animation: false,
+                geo: {},
+                series: [{
+                    name: '线',
+                    type: 'lines',
+                    zlevel: 1,
+                    lineStyle: {
+                        normal: {
+                            width: 0,
+                            curveness: 0.5,
+                            color: 'rgb(116,224,224)'
+                        }
+                    },
+                    effect: {
+                        constantSpeed: 35,
+                        show: true,
+                        trailLength: 0.3,
+                        symbolSize: 3
+                    },
+                    data: lineData
+                }, {
+                    name: '线',
+                    type: 'lines',
+                    zlevel: 0,
+                    animation: false,
+                    lineStyle: {
+                        normal: {
+                            color: 'rgb(28,105,108)',
+                            width: 2,
+                            opacity: 0.9,
+                            curveness: 0.5,
+                            shadowColor: '#ffff00',
+                            shadowBlur: 30,
+                            shadowOffsetX: 3,
+                            shadowOffsetY: 3
+                        }
+                    },
+                    data: lineData
+                }, {
+                    name: '点',
+                    animation: false,
+                    type: 'effectScatter',
+                    coordinateSystem: 'geo',
+                    zlevel: 0,
+                    showEffectOn: 'render',
+                    rippleEffect: {
+                        brushType: 'stroke'
+                    },
+                    tooltip: {
+                        formatter: '{b}'
+                    },
+                    symbolSize: function(evt) {
+                        return evt[2];
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: '#ffff00',
+                            shadowColor: 'rgb(0,255,0)',
+                            shadowBlur: 30,
+                            shadowOffsetX: 3,
+                            shadowOffsetY: 3
+                        }
+                    },
+                    label: {
+                        normal: {
+                            show: true,
+                            position: 'right',
+                            formatter: '{b}',
+                            textStyle: {
+                                color: 'rgb(255,255,255)'
+                            }
+                        }
+                    },
+                    data: pointData
+                }]
+            };
+
+            PowerGis.addEchartsLayerByOption(window.map, "echartsLayer", option, function() {}, false);
+        }
+    </script>
+</body>
+
+</html>

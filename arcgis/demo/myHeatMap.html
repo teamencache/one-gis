@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>my heatMap</title>
+    <link
+      rel="stylesheet"
+      href="http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/esri/themes/light/main.css"
+    />
+    <style>
+              html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+    <!-- <script src="https://js.arcgis.com/4.16/"></script> -->
+    <script>
+      window.dojoConfig={
+        baseUrl:'http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/dojo',
+        locale: 'zh-cn', //小写才会生效
+        async: true,
+      };
+    </script>
+    <script src="http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/dojo/dojo.js"></script>
+</head>
+<body>
+    <div id="viewDiv"></div>
+    <script>
+        let map, view;
+        require([
+        "esri/WebMap",
+        "esri/views/MapView",
+        "esri/views/SceneView",
+        "esri/widgets/Expand",
+        "esri/core/watchUtils",
+        'esri/Graphic', 
+        'esri/geometry/Point',
+        "esri/layers/CSVLayer",
+        "esri/layers/GraphicsLayer",
+        "esri/layers/FeatureLayer",
+        "esri/renderers/HeatmapRenderer"
+      ], function (WebMap, MapView, SceneView, Expand, watchUtils, 
+      Graphic, Point,
+      CSVLayer, GraphicsLayer, FeatureLayer, HeatmapRenderer) {
+         map = new WebMap({
+          portalItem: {
+            id: "559f46c1162d4a09901438d92148e53a"
+          }
+        });
+        // SceneView不支持heatmap渲染
+         view = new MapView({
+          container: "viewDiv",
+          map: map,
+          constraints: {
+            minScale: 1155582
+          }
+        });
+        map.load().then(()=>{
+          let portLayer = view.map.layers.getItemAt(0);
+          // portLayer.destroy();
+          let pointLayer = new GraphicsLayer({id:'点位图层'});
+          const heatRenderer = {
+              type: "heatmap",
+              colorStops: [
+                  { color: "rgba(63, 40, 102, 0)", ratio: 0 },
+                  { color: "#472b77", ratio: 0.083 },
+                  { color: "#4e2d87", ratio: 0.166 },
+                  { color: "#563098", ratio: 0.249 },
+                  { color: "#5d32a8", ratio: 0.332 },
+                  { color: "#6735be", ratio: 0.415 },
+                  { color: "#7139d4", ratio: 0.498 },
+                  { color: "#7b3ce9", ratio: 0.581 },
+                  { color: "#853fff", ratio: 0.664 },
+                  { color: "#a46fbf", ratio: 0.747 },
+                  { color: "#c29f80", ratio: 0.83 },
+                  { color: "#e0cf40", ratio: 0.913 },
+                  { color: "#ffff00", ratio: 1 }
+              ],
+              maxPixelIntensity: 25,
+              minPixelIntensity: 0
+          };
+            let center = {
+              latitude: 32.72626043888839,
+              longitude: -117.05739999999804
+            };
+            let index = 500;
+            let data = [];
+            do {
+                let item = {
+                    latitude: center.latitude + (Math.random() - 0.5) * Math.random() * 2,
+                    longitude: center.longitude + (Math.random() - 0.5) * Math.random() * 2,
+                    crime_count:index%100
+                    // intensity:Math.random()
+                };
+                let pt = new Point(item);
+                data.push(new Graphic(pt, null, item));
+                index--;
+            } while (index > 0);
+
+            const featureLayer = new FeatureLayer({
+                    source: data,
+                    /* fields: [{
+                      name: "ObjectID",
+                      alias: "ObjectID",
+                      type: "oid"
+                    }, {
+                      name: "place",
+                      alias: "Place",
+                      type: "string"
+                    }], */
+                    field: "crime_count",
+                    objectIdField: "ObjectID",
+                    geometryType: "point",
+                    renderer:heatRenderer,
+                    id:'热力图'
+            });
+
+            map.add(featureLayer)
+        })
+        
+
+    });
+        
+    </script>
+</body>
+</html>

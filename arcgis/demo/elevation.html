@@ -1,0 +1,100 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+
+    <!--
+  ArcGIS API for JavaScript, https://js.arcgis.com
+  For more information about the visualization-heatmap-scale sample, read the original sample description at developers.arcgis.com.
+  https://developers.arcgis.com/javascript/latest/sample-code/visualization-heatmap-scale/index.html
+  -->
+<title>
+      Create a scale-dependent visualization | Sample | ArcGIS API for
+      JavaScript 4.16
+    </title>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.16/esri/themes/light/main.css"
+    />
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+
+    <script>
+      window.dojoConfig={
+        baseUrl:'http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/dojo',
+        locale: 'zh-cn', //小写才会生效
+        async: true,
+      };
+    </script>
+    <script src="http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/dojo/dojo.js"></script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <script>
+      let map, view;
+      let portalItem = {
+          id: '810e3a28418d4276ac0f941db842c0a2',
+          portal: {
+            url: 'http://172.19.1.147/portal'
+          }
+      };
+      require([
+        "esri/Ground",
+        'esri/Map',
+        'esri/Basemap',
+        "esri/WebMap",
+        "esri/WebScene",
+        "esri/views/MapView",
+        'esri/views/SceneView',
+        "esri/widgets/Expand",
+        "esri/core/watchUtils",
+        'esri/layers/TileLayer',
+        'esri/layers/SceneLayer',
+         'esri/layers/ElevationLayer',
+      ], function (Ground, Map, Basemap, WebMap, WebScene, MapView, SceneView, Expand, watchUtils,
+      TileLayer, SceneLayer, ElevationLayer) {
+        map = new WebScene({
+          'portalItem': portalItem
+        });
+        let imgUrl = 'http://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer';
+        let tileLayer = new TileLayer({
+          url:imgUrl,
+          id:'切片图'
+        });
+        map.add(tileLayer);
+        /* let worldElevation = ElevationLayer({
+          url: "//elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer"
+        }); */
+        /* map = new Map({
+          basemap: 'hybrid',
+          ground:'world-elevation'
+          // ground: new Ground({
+          //   layers: [ worldElevation ]
+          // })
+        }); */
+
+        view = new SceneView({
+          container: "viewDiv",
+          map: map,
+          center: [116.721721, 35.2800549],
+          zoom: 16.9,
+          minZoom: 7
+        });
+      });
+    </script>
+  </body>
+</html>
