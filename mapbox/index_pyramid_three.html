@@ -5,9 +5,9 @@
     <meta charset="utf-8">
     <title>Add a custom style layer</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.3.1/mapbox-gl.css" rel="stylesheet">
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.3.1/mapbox-gl.js"></script>
-    <script src="plugins/gl-matrix-2.8.1.js"></script>
+    <link href="/one-gis/plugin/mapbox_2.3.0/mapbox-gl.css" rel="stylesheet">
+    <script src="/one-gis/plugin/mapbox_2.3.0/mapbox-gl.js"></script>
+    <script src="/one-gis/plugin/gl-Matrix/gl-matrix.js"></script>
     <style>
         body {
             margin: 0;
@@ -24,7 +24,7 @@
 </head>
 
 <body>
-    <script src="https://unpkg.com/three@0.126.0/build/three.min.js"></script>
+    <script src="/one-gis/plugin/three/three.min.126.js"></script>
     <div id="map"></div>
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoidGVhbWVuY2FjaGUiLCJhIjoiY2txZzcxa2NrMHB4eTJ1bnphem9lazZrYiJ9.bQ9wCbRR64Iaxgk4-l2JCw';
@@ -116,7 +116,7 @@
 
             let uniforms = {
                 u_Sampler2D: {
-                    value: new THREE.TextureLoader().load("images/渐变色1.jpg")
+                    value: new THREE.TextureLoader().load("/one-gis/resource/images/渐变色1.jpg")
                 },
                 u_ConfineMatrix: {
                     type: 'm4',

@@ -23,24 +23,78 @@ precision mediump float;
 uniform float u_Time;
 varying vec2 v_TexCoord;
 varying vec3 v_Position;
+//获取圆环不透明度
+float getRingOpacity(in float radius){
+    float end_0 = 0.2;//不透明度开始从0增大
+    float end_1 = 0.35;//不透明度逐渐增大到1.0
+    float end_2 = 0.4;//不透明度维持在1.0
+    float end_3 = 0.45;//不透明度逐渐减小到0.0
+    float opacity = 0.0;
+    float dValue;
+    if(radius>0.5){
+        radius = radius - 0.5;
+    }
+    if(radius < end_0){
+        opacity = 0.0;
+    }else if(radius < end_1){
+        dValue = end_1 - end_0;
+        opacity = (radius - end_0) / dValue;
+    }else if(radius < end_2){
+        opacity = 1.0;
+    }/* else if(radius < end_3){
+        dValue = end_3 - end_2;
+        opacity = 1.0 - (radius - end_2) / dValue;
+    } */
+    return opacity;
+}
+//换取闪动圆环整体的不透明度
+float getMainOpacity(in float radius){
+    float begindRadius = 0.0;
+    float endRadius = 0.4;
+    float opacity = 1.0;
+    if(radius > endRadius){
+        opacity = 0.0;
+    }else if(radius > begindRadius){
+        opacity = 1.0 - (radius - begindRadius)/(endRadius - begindRadius);
+    }
+    return opacity;
+}
 void main(){
-    vec3 u_BlingColor = vec3(0, 1.0, 0);
-    float u_Radius = 0.5;
-    float u_Frequency = 10.0;//控制重复环的相对多少
-    float u_Speed = 2.0;
-    float alpha = 0.0;
-    //圆
-    float dis = distance(v_TexCoord.xy, vec2(u_Radius,u_Radius));
-    /* u_Radius = 1.0;
-    float dis = distance(v_Position.xy, vec2(0.0,0.0)); */
-    float de = abs(cos(dis*u_Frequency + u_Time/3.14/u_Speed));//闪动
-    de = clamp(de, 0.1, 1.0);
-    if(dis > u_Radius){
+    vec3 u_BlingColor = vec3(1.0, 0, 0);//颜色
+    vec2 v_Center = vec2(0.5, 0.5);//圆环中心点
+    float maxRadius = 0.5;//纹理坐标中
+    float distance = distance(v_TexCoord.xy, v_Center);//圆心距离
+    if(distance > maxRadius){
         discard;
     }
-    alpha = sin(dis/(u_Radius/2.0)*3.14/2.0);//半径一半处不透明度最高
-    gl_FragColor=vec4(de * u_BlingColor,alpha);
+    float mainOpacity = getMainOpacity(distance);
+    float ringRadius =  distance + fract(u_Time) * maxRadius;//相对于圆环内的半径
+    float ringOpacity = getRingOpacity(ringRadius);
+    gl_FragColor=vec4(u_BlingColor, mainOpacity * ringOpacity);
 }
+/* void main(){
+    vec3 u_BlingColor = vec3(0, 1.0, 0);//颜色
+    vec2 v_Center = vec2(0.5, 0.5);//圆环中心点
+    float maxRadius = 0.5;//纹理坐标中
+    float blingLength = 0.2;//圆环的径向最大长度
+    float bingNum = 1.0;//圆环个数
+    float blingDelay = 0.1;//圆环间的偏移量
+    float u_Speed = 2.0;
+    float alpha = 0.0;
+    float radius = distance(v_TexCoord.xy, v_Center);//圆心距离
+    float offset = u_Time;//纹理坐标中移动距离
+    float offsetRadius = radius + offset;//圆环外边缘的实际
+    float relativeRadius = fract( offsetRadius / maxRadius ) * maxRadius;//将位置换算到maxRadius内
+    alpha = relativeRadius;
+    if(radius > maxRadius){
+        discard;
+    }
+    if(radius > blingLength){
+        alpha = (1.0 - (radius - blingLength) / (maxRadius - blingLength) )  * alpha;
+    }
+
+    gl_FragColor=vec4(u_BlingColor,alpha);
+} */
 `;
 let ele;
 let gl, shaderProgram, vertexShader, fragmentShader;
@@ -93,7 +147,7 @@ let local = {
 
 function render() {
     let param = local.u_Time;
-    param.value -= 0.3;
+    param.value -= 0.01;
     gl.uniform1f(param.location, param.value);
     // gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_BYTE, 0);
