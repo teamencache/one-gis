@@ -29,16 +29,20 @@
     <div id="map"></div>
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoidGVhbWVuY2FjaGUiLCJhIjoiY2txZzcxa2NrMHB4eTJ1bnphem9lazZrYiJ9.bQ9wCbRR64Iaxgk4-l2JCw';
+        var center = { lat: 29.816727930552048, lng: 107.62659474954512 };
         var map = window.map = new mapboxgl.Map({
             container: 'map',
-            center: { lat: 29.816727930552048, lng: 107.62659474954512 },
-        maxZoom: 17,
-        minZoom: 1,
-        zoom: 7.5,
-        pitch: 40,
-        style: simple,
+            center: center,
+            maxZoom: 17,
+            minZoom: 1,
+            zoom: 7.5,
+            pitch: 40,
+            style: simple,
             antialias: true // create the gl context with MSAA antialiasing, so custom layers are antialiased
         });
+        /* map.on('click',function(e){
+            debugger
+        }) */
         var camera, scene, renderer, stats, control, material;
 
         var sphere, terrain, target, box, depthScene, orthCamera;
@@ -52,7 +56,51 @@
 
         var clock = new THREE.Clock();
         var rainImage = '/one-gis/resource/images/rainColor.png';
-        var screenScale = 1000;
+        // 重庆范围
+        let bounds = {
+            _ne:{
+                lat: 32.35149879898762,
+                lng: 112.89402172815619
+            },
+            _sw:{
+                lat: 27.960294883938673,
+                lng: 102.59196153828759
+            },
+            getCenter(){
+                let lng = (this._ne.lng - this._sw.lng)/2 + this._sw.lng;
+                let lat = (this._ne.lat - this._sw.lat)/2 + this._sw.lat;
+                return {
+                    lng:lng,
+                    lat:lat
+                }
+            },
+            _nePoint:null,
+            _swPoint:null,
+            size(){
+                this._nePoint = mapboxgl.MercatorCoordinate.fromLngLat(this._ne, 2);
+                this._swPoint = mapboxgl.MercatorCoordinate.fromLngLat(this._sw, 2);
+                return {
+                    x:this._nePoint.x - this._swPoint.x,
+                    y:this._nePoint.y - this._swPoint.y,
+                    z:this._swPoint.z,
+                    scale:this._swPoint.meterInMercatorCoordinateUnits()
+                }
+            }
+        };
+        let screenPoint =  mapboxgl.MercatorCoordinate.fromLngLat(bounds.getCenter(), 0);
+        let boxSize = bounds.size();
+        const modelTransform = {
+            translateX: screenPoint.x,
+            translateY: screenPoint.y,
+            translateZ: screenPoint.z,
+            rotateX: 0,
+            rotateY: 0,
+            rotateZ: 0,
+            /* Since the 3D model is in real world meters, a scale transform needs to be
+            * applied since the CustomLayerInterface expects units in MercatorCoordinates.
+            */
+            scale: boxSize.scale * 10000
+        };
         // create a custom style layer to implement the WebGL content
         var highlightLayer = {
             id: 'highlight',
@@ -61,51 +109,65 @@
             // method called when the layer is added to the map
             // https://docs.mapbox.com/mapbox-gl-js/api/#styleimageinterface#onadd
             onAdd: function (map, gl) {
-                init(map, gl, this);
+                this.camera = new THREE.Camera();
+                this.scene = new THREE.Scene();
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: map.getCanvas(),
+                    context: gl,
+                    alpha:true,
+                    antialias: true
+                });
+                this.renderer.autoClear = false;
+                
+                const geometry = new THREE.BoxGeometry( 2, 2, 1 );
+                const material = new THREE.MeshBasicMaterial( {color: 0x00ff00, transparent:true,opacity:0.4} );
+                const cube = new THREE.Mesh( geometry, material );
+                this.scene.add(cube);
+                /* let box = new THREE.Box3(
+                    new THREE.Vector3(-1 , -1, 0),
+                    new THREE.Vector3(1, 1, 1)
+                );
+                let boxMesh = new THREE.Mesh(box, material);
+                this.scene.add(boxMesh); */
             },
 
             // method fired on each animation frame
             // https://docs.mapbox.com/mapbox-gl-js/api/#map.event:render
             render: function (gl, matrix) {
                 gl.useProgram(this.program);
-                this.camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
-                render(this);
+                const m = new THREE.Matrix4().fromArray(matrix);
+                const l = new THREE.Matrix4()
+                    .makeTranslation(
+                        modelTransform.translateX,
+                        modelTransform.translateY,
+                        modelTransform.translateZ
+                    )
+                    .scale(
+                        new THREE.Vector3(
+                            modelTransform.scale,
+                            -modelTransform.scale,
+                            modelTransform.scale
+                        )
+                    );
+                this.camera.projectionMatrix = m.multiply(l);
+                this.renderer.resetState();
+                this.renderer.render(this.scene, this.camera);
                 map.triggerRepaint();
             }
         };
 
         map.on('load', function () {
             map.addLayer(highlightLayer);
-            /* map.addSource('mapbox-dem', {
-                'type': 'raster-dem',
-                'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
-                'tileSize': 512,
-                'maxzoom': 14
-                }); */
-                // add the DEM source as a terrain layer with exaggerated height
-                // map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
-                
-                // add a sky layer that will show when the map is highly pitched
-                /* map.addLayer({
-                'id': 'sky',
-                'type': 'sky',
-                'paint': {
-                'sky-type': 'atmosphere',
-                'sky-atmosphere-sun': [0.0, 0.0],
-                'sky-atmosphere-sun-intensity': 15
-                }
-                }); */
+            console.log('map load');
         });
 
     function init(map, gl, layer) {
         let canvas = map.getCanvas();
-        let screenPoint = mapboxgl.MercatorCoordinate.fromLngLat(map.getCenter(), 100);
-        screenScale = screenPoint.meterInMercatorCoordinateUnits() ;
-        layer.camera = new THREE.PerspectiveCamera(40, canvas.width / canvas.height, 1, 150000);
-        layer.camera.position.set(screenPoint.x, screenPoint.y, 300);
+        layer.camera = new THREE.PerspectiveCamera(40, canvas.width / canvas.height, 0.1, 150000);
+        layer.camera.position.set(screenPoint.x, screenPoint.y, screenPoint.z * 100);
 
         layer.scene = new THREE.Scene();
-        layer.scene.background = new THREE.Color(0x333333);
+        // layer.scene.background = new THREE.Color(0x333333);
 
         console.log(layer.scene);
         
@@ -119,8 +181,8 @@
         // document.body.appendChild(renderer.domElement);
 
         box = new THREE.Box3(
-            new THREE.Vector3(-4000 , 0, -4000),
-            new THREE.Vector3(4000, 5000, 4000)
+            new THREE.Vector3(-1 , -1, 0),
+            new THREE.Vector3(1, 1, 1)
         );
 
         rain = createRain(layer);
@@ -132,8 +194,8 @@
         console.log(target);
         console.log(orthCamera);
 
-        var axesHelper = new THREE.AxesHelper(5000);
-        layer.scene.add(axesHelper);
+        /* var axesHelper = new THREE.AxesHelper(5000);
+        layer.scene.add(axesHelper); */
 
         /* stats = new Stats();
         document.body.appendChild(stats.dom);

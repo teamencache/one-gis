@@ -65,7 +65,7 @@
 
         rain = createRain();
 
-        terrain = createTerrain();
+        // terrain = createTerrain();
 
         createDepth();
 
@@ -151,7 +151,7 @@
         });
 
         renderer.setRenderTarget(target);
-        depthScene.children = [terrain];
+        // depthScene.children = [terrain];
         renderer.render(depthScene, orthCamera);
         renderer.setRenderTarget(null);
     }
