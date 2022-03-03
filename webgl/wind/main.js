@@ -137,7 +137,7 @@ const windgl = windCanvas.getContext("webgl", { antialiasing: false });
 const testgl = testCanvas.getContext("webgl", { antialiasing: false });
 
 const wind = new WindGL(windgl);
-wind.numParticles = 1024*8;
+wind.numParticles = 1024*50;
 
 const test = new WindGL(testgl);
 test.numParticles = 1024;
