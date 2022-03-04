@@ -1,13 +1,13 @@
 
-import * as util from './util';
+import * as util from './util.js';
 
-import drawVert from './shaders/draw.vert.glsl';
-import drawFrag from './shaders/draw.frag.glsl';
+import drawVert from './shaders/draw.vert.glsl.js';
+import drawFrag from './shaders/draw.frag.glsl.js';
 
-import quadVert from './shaders/quad.vert.glsl';
+import quadVert from './shaders/quad.vert.glsl.js';
 
-import screenFrag from './shaders/screen.frag.glsl';
-import updateFrag from './shaders/update.frag.glsl';
+import screenFrag from './shaders/screen.frag.glsl.js';
+import updateFrag from './shaders/update.frag.glsl.js';
 
 const defaultRampColors = {
     0.0: '#3288bd',
