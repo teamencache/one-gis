@@ -21,19 +21,38 @@ const defaultRampColors = {
 };
 
 export default class WindGL {
-    constructor(gl) {
+    constructor(gl, bbox) {
         this.gl = gl;
+        // screen textures to hold the drawn screen for the previous and the current frame
+        this.backgroundTexture=null;
+        this.screenTexture=null;
+        // textures to hold the particle state for the current and the next frame
+        this.particleStateTexture0=null;
+        this.particleStateTexture1=null;
 
-        this.fadeOpacity = 0.996; // how fast the particle trails fade on each frame
-        this.speedFactor = 0.25; // how fast the particles move
-        this.dropRate = 0.003; // how often the particles move to a random place
-        this.dropRateBump = 0.01; // drop rate increase relative to individual particle speed
+        this.windTexture=null;
+        this.colorRampTexture=null;
+        
+        this.fadeOpacity = 0.98; //  0.996; // how fast the particle trails fade on each frame
+		this.speedFactor = 0.25; // how fast the particles move
+		this.dropRate = 0.003; // how often the particles move to a random place
+		this.dropRateBump = 0.01; // drop rate increase relative to individual particle speed
 
-        this.drawProgram = util.createProgram(gl, drawVert, drawFrag);
-        this.screenProgram = util.createProgram(gl, quadVert, screenFrag);
-        this.updateProgram = util.createProgram(gl, quadVert, updateFrag);
-
-        this.quadBuffer = util.createBuffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]));
+        this.drawProgram = util.createProgram(gl, drawVert, drawFrag);//粒子绘制
+        this.screenProgram = util.createProgram(gl, quadVert, screenFrag);//绘制背景逐渐消失
+        this.updateProgram = util.createProgram(gl, quadVert, updateFrag);//粒子生成
+        let bboxVertexData = new Float32Array([
+            bbox._sw.x, bbox._sw.y,
+            bbox._ne.x, bbox._sw.y,
+            bbox._sw.x, bbox._ne.y,
+            bbox._sw.x, bbox._ne.y,
+            bbox._ne.x, bbox._sw.y,
+            bbox._ne.x, bbox._ne.y
+        ]);
+        this.bboxVertexData = bboxVertexData;
+        this.bboxVertexBuffer = util.createBuffer(gl, bboxVertexData);
+        const textureVertexData = new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]);
+        this.quadBuffer = util.createBuffer(gl, textureVertexData);
         this.framebuffer = gl.createFramebuffer();
 
         this.setColorRamp(defaultRampColors);
@@ -112,22 +131,25 @@ export default class WindGL {
         // save the current screen as the background for the next frame
         const temp = this.backgroundTexture;
         this.backgroundTexture = this.screenTexture;
-        this.screenTexture = temp;
+        this.screenTexture = temp;//不然需要重新生成texure对象
     }
 
     drawTexture(texture, opacity) {
         const gl = this.gl;
         const program = this.screenProgram;
         gl.useProgram(program.program);
-
-        util.bindAttribute(gl, this.quadBuffer, program.a_pos, 2);
+        if(opacity==1.0){
+            util.bindAttribute(gl, this.bboxVertexBuffer, program.a_pos, 2);
+        }else{
+            util.bindAttribute(gl, this.quadBuffer, program.a_pos, 2);
+        }
         util.bindTexture(gl, texture, 2);
         gl.uniform1i(program.u_screen, 2);
         gl.uniform1f(program.u_opacity, opacity);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
-
+// 绘制粒子到地图
     drawParticles() {
         const gl = this.gl;
         const program = this.drawProgram;
@@ -146,7 +168,7 @@ export default class WindGL {
 
         gl.drawArrays(gl.POINTS, 0, this._numParticles);
     }
-
+// 更新粒子位置
     updateParticles() {
         const gl = this.gl;
         util.bindFramebuffer(gl, this.framebuffer, this.particleStateTexture1);

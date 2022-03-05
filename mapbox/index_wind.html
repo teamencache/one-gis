@@ -17,7 +17,7 @@
         margin: 0;
         padding: 0;
       }
-      #map {
+      #mapContainer {
         position: absolute;
         top: 0;
         bottom: 0;
@@ -26,7 +26,7 @@
     </style>
   </head>
   <body>
-    <div id="map"></div>
+    <div id="mapContainer"></div>
     <script type="module">
       import WindGL from "/one-gis/webgl/wind/MyWind.js";
       let MyWind;
@@ -80,9 +80,10 @@
 
       updateWind("cut", function (data, image) {
         windData = data;
+        windData.image = image;
         windImage = image;
         map = new mapboxgl.Map({
-          container: "map",
+          container: "mapContainer",
           zoom: 3,
           center: { lat: 36.794095869900445, lng: 102.77435484147946 },
           style: "mapbox://styles/mapbox/light-v10",
@@ -91,6 +92,13 @@
         map.on("load", () => {
           map.addLayer(highlightLayer, "building");
         });
+        map.on('zoom',()=>{
+          let bounds = map.getBounds();
+          let latGap = bounds._ne.lat - bounds._sw.lat;
+          let height = parseInt(36/latGap*map.getCanvas().height);
+          //todo
+        });
+        window.map = map;
       });
 
       function createBuffer(gl, data, bufferType) {
@@ -136,12 +144,31 @@
         id: "highlight",
         type: "custom",
         onAdd: function (map, gl) {
-          /* MyWind = new WindGL(gl);
-          MyWind.numParticles = 1024 * 50;
-          MyWind.setWind(windData);
-          MyWind.image = windImage;
-          window.MyWind = MyWind; */
+          const toyko = mapboxgl.MercatorCoordinate.fromLngLat({
+            lng: 73,
+            lat: 18,
+          });
+          const kyiv = mapboxgl.MercatorCoordinate.fromLngLat({
+            lng: 136,
+            lat: 18,
+          });
+          const helsinki = mapboxgl.MercatorCoordinate.fromLngLat({
+            lng: 73,
+            lat: 54,
+          });
+          const berlin = mapboxgl.MercatorCoordinate.fromLngLat({
+            lng: 136,
+            lat: 54,
+          });
+          const bbox = {
+            _sw:toyko,
+            _ne:berlin
+          };
 
+          MyWind = new WindGL(gl, bbox);
+          MyWind.numParticles = 65535;
+          MyWind.setWind(windData);
+          window.MyWind = MyWind;
           const vertexSource = area_vertex.textContent;
           const fragmentSource = area_frag.textContent;
           const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -161,24 +188,8 @@
           this.a_uv = gl.getAttribLocation(this.program, "a_uv");
           this.u_sampler2D = gl.getUniformLocation(this.program, "u_sampler2D");
           this.u_mvpMatrix = gl.getUniformLocation(this.program, "u_mvpMatrix");
-          const toyko = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 73,
-            lat: 18,
-          });
-          const kyiv = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 136,
-            lat: 18,
-          });
-          const helsinki = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 73,
-            lat: 54,
-          });
-          const berlin = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 136,
-            lat: 54,
-          });
-
-          let vertexData = new Float32Array([
+          //通过drawElements索引缓存绘制面 绑定纹理单元时只能绑定0号
+          /* let vertexData = new Float32Array([
               toyko.x, toyko.y,0,0,0,
               kyiv.x, kyiv.y,0,1,0,
               helsinki.x, helsinki.y,0,0,1,
@@ -192,23 +203,48 @@
           this.vertexSize = 5;
           this.byteSize = vertexData.BYTES_PER_ELEMENT;
           this.vertexBuffer = createBuffer(gl, vertexData, gl.ARRAY_BUFFER);
-          this.indexBuffer = createBuffer(gl, indexData, gl.ELEMENT_ARRAY_BUFFER);
-
+          this.indexBuffer = createBuffer(gl, indexData, gl.ELEMENT_ARRAY_BUFFER); */
+          //通过drawArrays绘制面
+          let vertexData = new Float32Array([
+            toyko.x, toyko.y,
+            kyiv.x, kyiv.y,
+            helsinki.x, helsinki.y,
+            berlin.x, berlin.y
+          ]);
+          this.vertexSize = 2;
+          this.byteSize = vertexData.BYTES_PER_ELEMENT;
+          this.vertexBuffer = createBuffer(gl, vertexData, gl.ARRAY_BUFFER);
+          let textureVertexData = new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]);
+          this.textureBuffer = createBuffer(gl, textureVertexData, gl.ARRAY_BUFFER);
         },
 
         render: function (gl, mvpMatrix) {
           // MyWind.draw();
-          gl.useProgram(this.program);
-          
+
+          /* gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+          MyWind.draw();
+          map.triggerRepaint(); */
+
+          /* gl.useProgram(this.program);
+          windTexture = createTexture(gl, gl.LINEAR, windImage);
           gl.uniformMatrix4fv(this.u_mvpMatrix, false, mvpMatrix);
           gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
           gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
           bindAttribute(gl, this.vertexBuffer, this.a_pos, 3, 5, 0, this.byteSize);
           bindAttribute(gl, this.vertexBuffer, this.a_uv, 2, 5, 3, this.byteSize);
+          bindTexture(gl, windTexture, 2);
+          gl.drawElements(gl.TRIANGLES, this.indexData.length, gl.UNSIGNED_BYTE, 0); */
+          gl.useProgram(this.program);
+          windTexture = createTexture(gl, gl.LINEAR, windData.image);
+          gl.uniformMatrix4fv(this.u_mvpMatrix, false, mvpMatrix);
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+          bindAttribute(gl, this.vertexBuffer, this.a_pos, 2, 2, 0, this.byteSize);
+          bindAttribute(gl, this.textureBuffer, this.a_uv, 2, 2, 0, this.byteSize);
           bindTexture(gl, windTexture, 0);
-          gl.drawElements(gl.TRIANGLES, this.indexData.length, gl.UNSIGNED_BYTE, 0);
-          
+          gl.drawArrays(gl.TRIANGLES,0,6);
           map.triggerRepaint();
+          return true
         },
       };
     </script>
