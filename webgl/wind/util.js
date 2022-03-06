@@ -62,7 +62,28 @@ export function bindTexture(gl, texture, unit) {
     gl.bindTexture(gl.TEXTURE_2D, texture);
 }
 
-export function createBuffer(gl, data) {
+export function createBuffer(gl, data, type) {
+    const buffer = gl.createBuffer();
+    if (typeof type == 'undefined') {
+      type = gl.ARRAY_BUFFER;
+    }
+    gl.bindBuffer(type, buffer);
+    gl.bufferData(type, data, gl.STATIC_DRAW);
+    return buffer;
+  }
+  
+  export function bindAttribute(gl, buffer, attribute, attribLength, groupLength, start, size) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(attribute);
+    if (size) {
+      gl.enableVertexAttribArray(attribute);
+      /* eslint-disable-next-line */
+          gl.vertexAttribPointer(attribute, attribLength, gl.FLOAT, false, groupLength * size, start * size);
+    } else {
+      gl.vertexAttribPointer(attribute, attribLength, gl.FLOAT, false, 0, 0);
+    }
+  }
+/* export function createBuffer(gl, data) {
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
@@ -73,7 +94,7 @@ export function bindAttribute(gl, buffer, attribute, numComponents) {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.enableVertexAttribArray(attribute);
     gl.vertexAttribPointer(attribute, numComponents, gl.FLOAT, false, 0, 0);
-}
+} */
 
 export function bindFramebuffer(gl, framebuffer, texture) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
