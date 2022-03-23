@@ -1,0 +1,23 @@
+{
+  "name": "one-gis",
+  "version": "1.0.0",
+  "description": "it's a personal learning project about cesium,from simple to complexd width the study process going on.\r by the way,cesium is used in a related path.",
+  "main": "index.js",
+  "scripts": {
+    "start":"yarn serve",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teamencache/one-gis.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/teamencache/one-gis/issues"
+  },
+  "homepage": "https://github.com/teamencache/one-gis#readme",
+  "dependencies": {
+    "serve": "^13.0.2"
+  }
+}
