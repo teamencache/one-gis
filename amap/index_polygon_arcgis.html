@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      #mapBox {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: 0;
+      }
+    </style>
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="mapBox"></div>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=b698e8fc43715a16053e9fa156601706"></script>
+    <script src="/plugin/arcgis-to-geojson.js"></script>
+    <script>
+      var map = new AMap.Map("mapBox", {
+        /* viewMode:'3D',
+          pitch: 80, */
+        center: [120.194697, 28.638842],
+        zoom: 12,
+      });
+
+      let url =
+        "https://jyzhhb.jinyun.gov.cn:8010/arcgissxyd/rest/services/LS_JinYun/JinYun_GKDY/MapServer/1/query?f=json&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326";
+      fetch(url)
+        .then((res) => {
+          return res.json();
+        })
+        .then((res) => {
+          let arrPolygon = res.features.map((feature) => {
+            let geoFeature = ArcgisToGeojsonUtils.arcgisToGeoJSON(feature);
+            let polygon = new AMap.Polygon({
+              path: geoFeature.geometry.coordinates,
+              strokeColor: "#FF33FF",
+              strokeWeight: 6,
+              strokeOpacity: 0.2,
+              fillOpacity: 0.4,
+              fillColor: "#1791fc",
+              zIndex: 50,
+            });
+            map.add(polygon);
+            return polygon;
+          });
+        });
+
+      // 缩放地图到合适的视野级别
+      // map.setFitView([ polygon ])
+    </script>
+  </body>
+</html>
