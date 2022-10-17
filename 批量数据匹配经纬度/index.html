@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI批量处理</title>
+    <script src="/plugin/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+    <script>
+        let tdtPoiUrl =
+                'http://api.tianditu.gov.cn/search?postStr={"keyWord":"{keyword}","level":"16","mapBound":"73,18,136,54","queryType":"1","count":"20","start":"0"}&type=query&tk=390b6cce1498833f40b82608519d6050';
+        let dataPath = '/data/2021030415_AQI.json';
+        let data = [];
+        let index = 0;
+        $.getJSON(dataPath,(res)=>{
+            // data = res.data;
+            data = [{NAME:'博安达'},{NAME:'清华信息港'}];
+            findPOI();
+        });
+        function findPOI(){
+            let item = data[index++];
+            let url = tdtPoiUrl.replace('{keyword}', item.NAME);
+            $.get(url,(res)=>{
+                let pois = res.pois;
+                if(pois && pois.length){
+                    let lnglat = pois[0].lonlat.split(' ');
+                    item.JD = lnglat[0];
+                    item.WD = lnglat[1];
+                }
+                if(index<data.length){
+                    findPOI();
+                }else{
+                    exportJson();
+                }
+            })
+        }
+        function exportJson(){
+            let link = document.createElement('a')
+            link.download = 'POI补充结果.json';
+            link.href = 'data:text/plain,' + JSON.stringify(data)
+            link.click()
+        }
+        function uploadJson(){
+            // 创建一个file input
+            let input = document.createElement('input');
+            input.type = 'file';
+
+            // 绑定onchange事件
+            input.onchange = (event) => {
+                let files = event.target.files
+                if (!files || !files.length) {
+                    input = null
+                    throw new Error('No files')
+                }
+
+                // 当选择文件后，使用FileReader API读取文件，返回数据
+                let reader = new FileReader()
+                reader.onload = (event) => {
+                    try {
+                        input.remove();
+                        data = JSON.parse(event.target.result);
+                        findPOI();
+                    } catch (e) {
+                        throw new Error(e)
+                    }
+                    input = null
+                }
+                reader.readAsText(files[0])
+            }
+
+            // 触发上传文件
+            input.click();
+        }
+    </script>
+</body>
+</html>

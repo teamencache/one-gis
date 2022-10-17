@@ -1,12 +1,74 @@
 (function main(global) {
   let jsonHeader, jsonData;
   let canvas, img;
-  $.getJSON("/one-gis/data/2021030415_AQI.json", function (res, status) {
-    if (status !== "success") {
-      console.log("load failed");
+  load();
+  function load(){
+    /* let imageUrl = '../../resource/data/2022-04-19_PM10.PNG';
+    let image = new Image();
+    image.onload = function(){
+      handleGrayscale(image);
     }
-    jsonHeader = res[0].header;
-    jsonData = res[0].data;
+    image.src = imageUrl; */
+
+    let jsonUrl = '../../resource/data/2021030415_AQI.json';
+    $.getJSON(jsonUrl, function (res, status) {
+      if (status !== "success") {
+        console.log("load failed");
+      }
+      jsonHeader = res[0].header;
+      jsonData = res[0].data;
+      handleData();
+    });
+  }
+  
+
+  function handleGrayscale(image){
+    jsonHeader = {
+      nx:image.width,
+      ny:image.height
+    };
+    let eleOption = {
+      type: "canvas",
+      attr: {
+        width: jsonHeader.nx, //不能加px
+        height: jsonHeader.ny,
+      },
+      appendTo: window.document.body,
+    };
+    let ele = createElement(eleOption);
+    let context = ele.getContext("2d");
+    context.drawImage(image, 0, 0);
+    let imageData = context.getImageData(0, 0, image.width, image.height);
+    jsonData = [];
+    let colorData = imageData.data;
+    let length = colorData.length/4;
+    for (let i = 0; i < length; i++) {
+      let r = colorData[i*4];
+      let g = colorData[i*4+1];
+      let b = colorData[i*4+2];
+      let a = colorData[i*4+3];
+      let value = r + 250*g;
+      jsonData.push(value);
+    }
+    canvas = createElement(eleOption);
+    drawImage();
+    img = createElement({
+      type: "img",
+      attr: {
+        src: canvas.toDataURL(),
+      },
+      appendTo: window.document.body,
+    });
+    img = document.createElement("img");
+    //从图片中取色
+    img.onload = function () {
+      let rgba = getColorFromImage(img, 1000);//img,y
+      console.log('rgba('+ rgba[0] +','+ rgba[1] +','+ rgba[2] +','+ (rgba[3]/255) +')');
+    };
+    img.src = "../../resource/images/渐变色1.jpg";
+  }
+
+  function handleData(){
     let eleOption = {
       type: "canvas",
       attr: {
@@ -31,8 +93,8 @@
       let rgba = getColorFromImage(img, 1000);//img,y
       console.log('rgba('+ rgba[0] +','+ rgba[1] +','+ rgba[2] +','+ (rgba[3]/255) +')');
     };
-    img.src = "/one-gis/resource/images/渐变色1.jpg";
-  });
+    img.src = "../../resource/images/渐变色1.jpg";
+  }
 
   function drawImage() {
     let colorOption = getColorOption();

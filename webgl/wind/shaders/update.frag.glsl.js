@@ -45,7 +45,7 @@ void main() {
 
     // take EPSG:4236 distortion into account for calculating where the particle moved
     // 在计算粒子移动的位置时，将EPSG:4236畸变考虑在内 
-    float distortion = 1.0;//cos(radians(pos.y * 180.0 - 90.0));
+    float distortion = cos(radians(pos.y * 180.0 - 90.0));
     vec2 offset = vec2(velocity.x / distortion, -velocity.y) * 0.0001 * u_speed_factor;
 
     // update particle position, wrapping around the date line

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Add a custom style layer</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js"></script>
+<script src="../plugin/jquery-1.11.1.min.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+	// TO MAKE THE MAP APPEAR YOU MUST
+	// ADD YOUR ACCESS TOKEN FROM
+	// https://account.mapbox.com
+	mapboxgl.accessToken = 'pk.eyJ1IjoidGVhbWVuY2FjaGUiLCJhIjoiY2txZzcxa2NrMHB4eTJ1bnphem9lazZrYiJ9.bQ9wCbRR64Iaxgk4-l2JCw';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        zoom: 3,
+        center: [7.5, 58],
+        style: 'mapbox://styles/mapbox/light-v10',
+        antialias: true // create the gl context with MSAA antialiasing, so custom layers are antialiased
+    });
+
+    $.ajax({
+        url:'//10.238.206.248:5010/iserver/services/map-masdzdt_daimb/rest/maps/dzdtdaimb/tileFeature/vectorstyles.json?type=MapBox_GL&styleonly=true',
+        success:function(mvtStyle){
+					var zoom = mvtStyle.zoom == null ? minZoomLevel : mvtStyle.zoom;
+					// 把tile地址的宽高都设置成512，因为MapBoxGL只支持512的瓦片
+					if (mvtStyle.name) {
+						setTileSize(mvtStyle.sources[mvtStyle.name].tiles); 
+					} else {
+						setTileSize(getFirst(mvtStyle.sources).tiles); 
+					}
+					map = new mapboxgl.Map({
+						container: 'map', // container id
+						style: mvtStyle,
+						center: centerPoint,// starting position
+//						maxBounds:new mapboxgl.LngLatBounds(maxBoundsarray),
+						zoom: zoom, // starting zoom
+						minZoom: minZoomLevel,
+						maxZoom: maxZoomLevel,
+						crs: epsgCode
+					});
+    })
+</script>
+
+</body>
+</html>

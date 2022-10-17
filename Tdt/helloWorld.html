@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>天地图初始化</title>
+    <script src="http://api.tianditu.gov.cn/api?v=4.0&tk=eed0b5f131a8e0efe565fbc3024497a0"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      #container {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+    <script>
+      var map, marker, infoWindow, geocoder, queryData; //queryData={JD:'',WD:'',NAME:''}
+      var zoom = 17;
+      geocoder = new T.Geocoder();
+      infoWindow = new T.InfoWindow();
+
+      queryData = getQueryData();
+      map = initMap();
+      addControl();
+      drawData();
+
+      //url传参解析
+      function getQueryData() {
+        let search = window.location.search || "?";
+        search = decodeURI(search);
+        let arr = search.split(/[?,&]/g);
+        let queryData = {};
+        arr.forEach((strKV) => {
+          if (!strKV) {
+            return;
+          }
+          let arrKV = strKV.split("=");
+          queryData[arrKV[0]] = arrKV[1];
+        });
+        return queryData;
+      }
+      //初始化地图
+      function initMap(option) {
+        let jd = parseFloat(queryData.JD);
+        let wd = parseFloat(queryData.WD);
+        let center = new T.LngLat(116.40769, 39.89945);
+        if (!(isNaN(jd) || isNaN(wd))) {
+          center = new T.LngLat(jd, wd);
+        }
+        let opt = Object.assign(
+          {
+            zoom: zoom,
+            projection: "EPSG:4326",
+            center: center,
+          },
+          option
+        );
+        return new T.Map("container", opt);
+      }
+      // 添加控件
+      function addControl() {
+        //添加缩放平移控件
+        map.addControl(new T.Control.Zoom());
+        //添加比例尺控件
+        map.addControl(new T.Control.Scale());
+        // 地图添加鹰眼控件
+        map.addControl(
+          new T.Control.OverviewMap({
+            isOpen: true,
+            size: new T.Point(150, 150),
+          })
+        );
+        //添加地图类型控件
+        map.addControl(new T.Control.MapType());
+        //创建右键菜单对象
+        var menu = new T.ContextMenu({ width: 140 });
+        var txtMenuItem = [
+          {
+            text: "获得右键点击处坐标",
+            isDisable: false,
+            callback: function (lnglat) {},
+          },
+        ];
+
+        for (var i = 0; i < txtMenuItem.length; i++) {
+          //添加菜单项
+          var item = new T.MenuItem(
+            txtMenuItem[i].text,
+            txtMenuItem[i].callback
+          );
+          //item.disable();
+          menu.addItem(item);
+          if (i == 1 || i == 3) {
+            //添加分割线
+            menu.addSeparator();
+          }
+        }
+        map.addContextMenu(menu);
+      }
+      //地图绘制点
+      function drawData() {
+        let jd = parseFloat(queryData.JD);
+        let wd = parseFloat(queryData.WD);
+        if (!(isNaN(jd) || isNaN(wd))) {
+          point = new T.LngLat(jd, wd);
+          addMarker(point);
+          getLocation(point);
+        } else if (queryData.NAME) {
+          getPoint(queryData.NAME);
+        }
+      }
+      //添加marker
+      function addMarker(point) {
+        marker = new T.Marker(point, {
+          draggable: true,
+        }); // 创建标注
+        map.addOverLay(marker);
+        marker.addEventListener("click", function () {
+          marker.openInfoWindow(infoWindow);
+        }); // 将标注添加到地图中
+        marker.on("dragend", function (e) {
+          let lnglat = e.lnglat;
+          getLocation(lnglat);
+        });
+      }
+      // 坐标点反地址解析
+      function getLocation(lnglat) {
+        geocoder.getLocation(lnglat, function (res) {
+          let location = res.formatted_address;
+          infoWindow.setContent(location);
+          marker.openInfoWindow(infoWindow);
+          setData();
+        });
+      }
+      // 坐标点进行地址解析
+      function getPoint(NAME) {
+        geocoder.getPoint(NAME, function (res) {
+          let location = res.location;
+          infoWindow.setContent(NAME);
+          let lonlat = new T.LngLat(location.lon, location.lat);
+          map.centerAndZoom(lonlat, zoom);
+          addMarker(lonlat);
+          marker.openInfoWindow(infoWindow);
+          setData();
+        });
+      }
+      //  设置经纬度与名称
+      function setData() {
+        let lnglat = marker.getLngLat();
+        let content = infoWindow.getContent();
+        if (parent.angular) {
+          parent.angular
+            .element(window.parent.$("body"))
+            .scope()
+            .ctrl.event.setCoords(lnglat.lng, lnglat.lat, content);
+        }
+      }
+    </script>
+  </body>
+</html>

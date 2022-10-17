@@ -28,14 +28,23 @@ const defaultRampColors = {
       console.log('-');
       this.gl = gl;
   
-      this.fadeOpacity = 0.99; //  0.996; // how fast the particle trails fade on each frame
-      this.speedFactor = 0.25; // how fast the particles move
-      this.dropRate = 0.003; // how often the particles move to a random place
-      this.dropRateBump = 0.01; // drop rate increase relative to individual particle speed
+      // this.fadeOpacity = 0.99; //  0.996; // how fast the particle trails fade on each frame
+      // this.speedFactor = 0.25; // how fast the particles move
+      // this.dropRate = 0.003; // how often the particles move to a random place
+      // this.dropRateBump = 0.01; // drop rate increase relative to individual particle speed
+      this.fadeOpacity = 0.5; //  0.996; // how fast the particle trails fade on each frame
+		this.speedFactor = 0.25; // how fast the particles move
+		this.dropRate = 0.01; // how often the particles move to a random place
+		this.dropRateBump = 0.02; // drop rate increase relative to individual particle speed
 
+    
+      //从位置纹理中绘制粒子
       this.drawProgram = util.createProgram(gl, drawVert, drawFrag);
+      //绘制纹理
       this.screenProgram = util.createProgram(gl, quadVert, screenFrag);
+      //更新位置纹理
       this.updateProgram = util.createProgram(gl, quadVert, updateFrag);
+      // 绘制到指定矩形范围
       this.rectProgram = util.createProgram(gl, rectVert, rectFrag);
   
       this.quadBuffer = util.createBuffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]));
@@ -65,7 +74,8 @@ const defaultRampColors = {
         gl.canvas.width,
         gl.canvas.height
       );
-      this.initRect(bbox);
+      this.bbox = bbox;
+      this.initRect();
     }
   
     set numParticles(numParticles) {
@@ -108,11 +118,11 @@ const defaultRampColors = {
       this.windData = windData;
       this.windTexture = util.createTexture(this.gl, this.gl.LINEAR, windData.image);
     }
-    /*  get numParticles() {
+     get numParticles() {
       return this._numParticles;
-    } */
-    draw(mvpMatrix) {
-      const gl = this.gl;
+    }
+    draw(mvpMatrix, gl) {
+      gl = gl || this.gl;
       gl.disable(gl.DEPTH_TEST);
       gl.disable(gl.STENCIL_TEST);
   
@@ -130,7 +140,7 @@ const defaultRampColors = {
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   
       this.drawTexture(this.backgroundTexture, this.fadeOpacity);
-      this.drawParticles();
+      this.drawParticles(mvpMatrix);
   
       util.bindFramebuffer(gl, null);
   
@@ -159,7 +169,7 @@ const defaultRampColors = {
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
   
-    drawParticles() {
+    drawParticles(mvpMatrix) {
       const gl = this.gl;
       const program = this.drawProgram;
       gl.useProgram(program.program);
@@ -174,6 +184,14 @@ const defaultRampColors = {
       gl.uniform1f(program.u_particles_res, this.particleStateResolution);
       gl.uniform2f(program.u_wind_min, this.windData.uMin, this.windData.vMin);
       gl.uniform2f(program.u_wind_max, this.windData.uMax, this.windData.vMax);
+
+      let matrix = new Float32Array([
+        mvpMatrix[0], 0,0,0,
+        0,mvpMatrix[5],0,0,
+        0, 0,mvpMatrix[10],0,
+        0, 0, 0,mvpMatrix[15],
+      ]);
+      gl.uniformMatrix4fv(program.u_mvpMatrix, false, matrix);
   
       gl.drawArrays(gl.POINTS, 0, this._numParticles);
     }
@@ -206,8 +224,51 @@ const defaultRampColors = {
       this.particleStateTexture0 = this.particleStateTexture1;
       this.particleStateTexture1 = temp;
     }
+
+    initRect() {
+      let gl = this.gl;
+      const bbox = this.bbox;
+      const program = this.rectProgram;
+      gl.useProgram(program.program);
+      this.rectVertexData = new Float32Array([
+        /* eslint-disable-next-line */
+          0,0,0,0,0,
+          1,0,0,1,0,
+          0,1,0,0,1,
+          0,1,0,0,1,
+          1,0,0,1,0,
+          1,1,0,1,1,
+      ]);
+      if(this.bbox){
+        this.rectVertexData = new Float32Array([
+        /* eslint-disable-next-line */
+            bbox._sw.x, bbox._sw.y,0,0,0,
+            bbox._ne.x, bbox._sw.y,0,1,0,
+            bbox._sw.x, bbox._ne.y,0,0,1,
+            bbox._sw.x, bbox._ne.y,0,0,1,
+            bbox._ne.x, bbox._sw.y,0,1,0,
+            bbox._ne.x, bbox._ne.y,0, 1,1
+        ])
+      }
+      this.byteSize = this.rectVertexData.BYTES_PER_ELEMENT;
+      this.vertexBuffer = util.createBuffer(gl, this.rectVertexData, gl.ARRAY_BUFFER);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    }
+    drawRect(mvpMatrix) {
+      let gl = this.gl;
+      let program = this.rectProgram;
+      gl.useProgram(program.program);
+      // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      util.bindTexture(gl, this.screenTexture, 2);
+      gl.uniform1i(program.u_sampler2D, 2);
+      gl.uniformMatrix4fv(program.u_mvpMatrix, false, mvpMatrix);
+      gl.uniform1f(program.u_opacity, 1.0);
+      util.bindAttribute(gl, this.vertexBuffer, program.a_pos, 3, 5, 0, this.byteSize);
+      util.bindAttribute(gl, this.vertexBuffer, program.a_uv, 2, 5, 3, this.byteSize);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
   
-    initRect(bbox) {
+    initRect_bak() {
       let gl = this.gl;
       const program = this.rectProgram;
       gl.useProgram(program.program);
@@ -218,27 +279,25 @@ const defaultRampColors = {
           -1,1,0,0,1,
           1,1,0,1,1,
       ]);
-      if(bbox){
+      if(this.bbox){
         this.rectVertexData = new Float32Array([
         /* eslint-disable-next-line */
             bbox._sw.x, bbox._sw.y,0,0,0,
             bbox._ne.x, bbox._sw.y,0,1,0,
             bbox._sw.x, bbox._ne.y,0,0,1,
-            bbox._ne.x, bbox._ne.y,0, 1,1
+            bbox._ne.x, bbox._ne.y,0,1,1
         ])
       }
-      // this.rectTextureData = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
       let indexData = new Int8Array([0, 1, 2, 2, 1, 3]);
       this.indexData = indexData;
       this.vertexSize = 5;
       this.byteSize = this.rectVertexData.BYTES_PER_ELEMENT;
       this.vertexBuffer = util.createBuffer(gl, this.rectVertexData, gl.ARRAY_BUFFER);
       this.indexBuffer = util.createBuffer(gl, indexData, gl.ELEMENT_ARRAY_BUFFER);
-      // gl.uniformMatrix4fv(this.u_mvpMatrix, false, mvpMatrix);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     }
-    drawRect(mvpMatrix) {
+    drawRect_bak(mvpMatrix) {
       let gl = this.gl;
       let program = this.rectProgram;
       gl.useProgram(program.program);

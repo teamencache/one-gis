@@ -7,11 +7,8 @@
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
-    <link
-      href="https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css"
-      rel="stylesheet"
-    />
-    <script src="http://localhost:9966/dist/mapbox-gl-dev.js"></script>
+    <link href="../plugin/mapbox/mapbox-gl.css" rel="stylesheet" />
+    <script src="../plugin/mapbox/mapbox-gl-dev.js"></script>
     <style>
       body {
         margin: 0;
@@ -28,7 +25,7 @@
   <body>
     <div id="mapContainer"></div>
     <script type="module">
-      import WindGL from "/one-gis/webgl/wind/MyWind.js";
+      import WindGL from "../webgl/wind/MyWind.js";
       let MyWind;
       let map;
       let windData, windImage;
@@ -46,38 +43,29 @@
         48: "2016112200",
       };
 
-      const toyko = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 73,
-            lat: 18,
-          });
-          const kyiv = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 136,
-            lat: 18,
-          });
-          const helsinki = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 73,
-            lat: 54,
-          });
-          const berlin = mapboxgl.MercatorCoordinate.fromLngLat({
-            lng: 136,
-            lat: 54,
-          });
-          const bbox = {
-            _sw:toyko,
-            _ne:berlin
-          };
+      const sw = mapboxgl.MercatorCoordinate.fromLngLat({
+        lng: 73,
+        lat: 18,
+      });
+      const ne = mapboxgl.MercatorCoordinate.fromLngLat({
+        lng: 136,
+        lat: 54,
+      });
+      const bbox = {
+        _sw: sw,
+        _ne: ne,
+      };
 
       mapboxgl.accessToken =
         "pk.eyJ1IjoidGVhbWVuY2FjaGUiLCJhIjoiY2txZzcxa2NrMHB4eTJ1bnphem9lazZrYiJ9.bQ9wCbRR64Iaxgk4-l2JCw";
 
       function updateWind(name, callback) {
         getJSON(
-          "/one-gis/resource/wind/" + windFiles[name] + ".json",
+          "../resource/wind/" + windFiles[name] + ".json",
           function (windData) {
             const windImage = new Image();
             windData.image = windImage;
-            windImage.src =
-              "/one-gis/resource/wind/" + windFiles[name] + ".png";
+            windImage.src = "../resource/wind/" + windFiles[name] + ".png";
             windImage.onload = function () {
               callback(windData, windImage);
             };
@@ -99,7 +87,7 @@
         xhr.send();
       }
 
-      updateWind("cut", function (data, image) {
+      updateWind("0", function (data, image) {
         windData = data;
         windData.image = image;
         windImage = image;
@@ -107,20 +95,30 @@
           container: "mapContainer",
           zoom: 3,
           center: { lat: 36.794095869900445, lng: 102.77435484147946 },
-          style: "mapbox://styles/mapbox/light-v10",
+          style: "mapbox://styles/mapbox/dark-v10",
+          renderWorldCopies: true,
           antialias: true, // create the gl context with MSAA antialiasing, so custom layers are antialiased
         });
         map.on("load", () => {
           map.addLayer(highlightLayer, "building");
         });
-        map.on('zoom',()=>{
+        map.on("zoom", () => {
           let bounds = map.getBounds();
           let latGap = bounds._ne.lat - bounds._sw.lat;
-          let height = parseInt(36/latGap*map.getCanvas().height);
+          let height = parseInt((36 / latGap) * map.getCanvas().height);
           //todo
           window.MyWind &&  window.MyWind.resize(bbox);
         });
-        window.map = map;
+        /* map.on('wheel', function () {
+          window.MyWind &&  window.MyWind.resize(bbox);
+        });
+        map.on('dragstart', function () {
+          window.MyWind &&  window.MyWind.resize(bbox);
+        }); */
+        /* map.on('move', function () {
+          window.MyWind &&  window.MyWind.resize(bbox);
+        });
+        window.map = map; */
       });
 
       // create a custom style layer to implement the WebGL content
@@ -128,18 +126,17 @@
         id: "highlight",
         type: "custom",
         onAdd: function (map, gl) {
-          
-
-          MyWind = new WindGL(gl,bbox);
+          MyWind = new WindGL(gl);
           MyWind.numParticles = 65535;
           MyWind.setWind(windData);
+          MyWind.resize(bbox);
           window.MyWind = MyWind;
         },
 
         render: function (gl, mvpMatrix) {
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-          MyWind.draw(mvpMatrix);
+          MyWind.draw(mvpMatrix, gl);
           map.triggerRepaint();
         },
       };

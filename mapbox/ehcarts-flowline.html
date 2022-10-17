@@ -1,0 +1,153 @@
+
+<html>
+
+    <head>
+        <script src="https://api.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js"></script>
+        <!-- <script src="https://cdn.jsdelivr.net/npm/echarts@v3.8.0/dist/echarts.min.js"></script> -->
+        <script src="https://cdn.staticfile.org/echarts/3.8.0/echarts.min.js"></script>
+        <script src="http://echarts.baidu.com/resource/echarts-gl-latest/dist/echarts-gl.min.js"></script>
+    </head>
+    
+    <body style="margin: 0; padding: 0;">
+        <div id="map" style="width: 100vw; height: 100vh"></div>
+    </body>
+    
+    <script type="text/javascript">
+        async function initialize() {
+            
+            // let jsonData = '请求的数据'
+            // var szRoad=jsonData;
+    
+            var busLines = [];
+            // var data = szRoad.data;
+            // 示例数据
+            var data = [{
+    "ROAD_LINE":"113.89793,22.55675;113.89783,22.55685;113.89767,22.557;113.89767,22.557;113.89752,22.55687;113.89735,22.55674;113.89719,22.55661;113.89705,22.55649;113.89687,22.55633;113.89687,22.55633;113.89667,22.55651;113.89653,22.55664;113.89648,22.55669;113.89635,22.55679;113.89635,22.55679;113.89716,22.55749;113.89727,22.55759;113.89746,22.55775;113.89746,22.55786;113.89729,22.55803;113.89682,22.55849;113.89636,22.55892;113.89587,22.55941;113.89551,22.55976;113.89551,22.55976;113.89592,22.56008;113.89595,22.5601;113.89597,22.56016;113.89609,22.56027;113.89623,22.56039;113.89637,22.5605;113.89651,22.56063;113.89668,22.56078;113.89668,22.56078;113.89629,22.56119;113.89625,22.56123;113.89617,22.56132;113.89617,22.56132;113.89608,22.56124;113.89589,22.56112"
+    },
+    {
+    "ROAD_LINE":"113.88296,22.56812;113.88304,22.56817;113.88316,22.56826;113.88334,22.56842;113.88334,22.56842;113.88345,22.5683;113.88357,22.56819;113.88357,22.56819;113.88382,22.5684;113.88406,22.5686;113.88419,22.56871;113.88425,22.56876;113.88428,22.56878;113.88441,22.56889;113.88464,22.56912;113.88524,22.56962;113.88524,22.56962;113.88579,22.56908;113.88628,22.56861;113.88685,22.56805;113.88705,22.56784;113.88712,22.56778;113.8873,22.56758;113.88773,22.56719;113.88777,22.56715;113.88844,22.5665;113.88859,22.56635;113.88865,22.56629;113.88904,22.56592;113.88909,22.56586;113.88963,22.56534;113.88981,22.56517;113.88986,22.56523;113.88916,22.56589;113.88914,22.56592;113.88845,22.56658;113.88845,22.56658;113.88889,22.56698;113.88889,22.56698;113.889,22.56688;113.88936,22.56648"
+    }];
+            var hStep = 300 / (data.length - 1);
+    
+            var i = 0;
+            for (var x in data) {
+                // i++;
+                // if(i<5000)
+                //     continue;
+                var line = data[x];
+                // if(busLines.length>500)
+                //     break;
+                var pointString = line.ROAD_LINE;
+                var pointArr = pointString.split(';');
+                var lnglats = [];
+                for (var j in pointArr) {
+                    lnglats.push(pointArr[j].split(','))
+                }
+                busLines.push({
+                    coords: lnglats,
+                    lineStyle: {
+                        normal: {
+                            color: echarts.color.modifyHSL('#5A94DF', Math.round(hStep * x))
+                        }
+                    }
+                })
+            }
+    
+            option = {
+                backgroundColor: '#404a59',
+                mapbox: {
+                    center: [113.89764, 22.58294],
+                    zoom: 14,
+                    altitudeScale: 10000,
+                    style: {
+                        'version': 8,
+                        'sources': {
+                            'raster-tiles': {
+                                'type': 'raster',
+                                'tiles': [
+                                    'https://map.geoq.cn/arcgis/rest/services/ChinaOnlineStreetPurplishBlue/MapServer/tile/{z}/{y}/{x}'
+                                ],
+                                'tileSize': 256
+                            }
+                        },
+                        'layers': [
+                            {
+                                'id': 'simple-tiles',
+                                'type': 'raster',
+                                'source': 'raster-tiles',
+                                'minzoom': 0,
+                                'maxzoom': 22
+                            }
+                        ]
+                    },
+                    postEffect: {
+                        enable: true,
+                        FXAA: {
+                            enable: true
+                        }
+                    },
+                    light: {
+                        main: {
+                            intensity: 1,
+                            shadow: true,
+                            shadowQuality: 'high'
+                        },
+                        ambient: {
+                            intensity: 0
+                        },
+                        ambientCubemap: {
+                            // texture: '/asset/get/s/data-1491838644249-ry33I7YTe.hdr',
+                            texture: '/asset/get/s/Milkyway_Light.hdr',
+                            exposure: 1,
+                            diffuseIntensity: 0.5,
+                            specularIntensity: 2
+                        }
+                    }
+                },
+                series: [{
+                    type: 'lines3D',
+    
+                    coordinateSystem: 'mapbox',
+    
+                    effect: {
+                        show: true,
+                        constantSpeed: 2,
+                        trailWidth: 2,
+                        trailLength: 0.4,
+                        trailOpacity: 1,
+                        spotIntensity: 10
+                    },
+    
+                    blendMode: 'lighter',
+    
+                    polyline: true,
+    
+                    lineStyle: {
+                        width: 0.1,
+                        color: 'rgb(200, 40, 0)',
+                        opacity: 0
+                    },
+    
+                    data: {
+                        count: function () {
+                            return busLines.length;
+                        },
+                        getItem: function (idx) {
+                            return busLines[idx]
+                        }
+                    }
+                }]
+            };
+       
+            var myChart = echarts.init(document.getElementById('map'));
+            myChart.setOption(option);
+    
+        }
+        initialize();
+    
+    
+    
+    </script>
+    
+    </html>
+    
