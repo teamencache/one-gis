@@ -34,7 +34,7 @@
           return res.json();
         })
         .then((res) => {
-          let arrPolygon = res.features.map((feature) => {
+          res.features.forEach((feature) => {
             let geoFeature = ArcgisToGeojsonUtils.arcgisToGeoJSON(feature);
             let polygon = new AMap.Polygon({
               path: geoFeature.geometry.coordinates,
@@ -44,9 +44,13 @@
               fillOpacity: 0.4,
               fillColor: "#1791fc",
               zIndex: 50,
+              extData:geoFeature.properties
+            });
+            polygon.on('click',(e)=>{
+              let properties = e.target.getExtData();
+              debugger
             });
             map.add(polygon);
-            return polygon;
           });
         });
 
