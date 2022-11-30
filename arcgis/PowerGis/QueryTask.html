@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueryTask[矢量数据->服务数据查询]</title>
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            margin: 0;
+            padding: 0 !important;
+            overflow: hidden;
+        }
+    </style>
+  <script>
+    window.GisServerGlobalConstant = {
+        ProjectTiandituKey: '0722cee366ea11e07be2a412265f0ac2', //天地图key   822304a0a8151a8e2af461f29de06a0b
+        needToken: false, //是否需要请求arcgis token
+        needXmltojson: false, //是否需要xmltojosn库， 用于EsrilocalLayer、esri本地切片
+        needSaveMap: false, //是否需要地图导出
+        needWind: false, //是否需要风场
+        needBaidu: false, //是否需要百度库、用于百度坐标系转换，一般底图为百度地图时可能用到
+        needFullscreen: false, //是否需要全屏
+        needD3: false, //是否需要d3
+        needTerraformer: false, //是否数据转换，比如需要将pbf数据转成geojson,geojson 转换为arcgis json 等
+        needShapefile: false, //是否需要解析shapefile 数据
+        needGeotiff: false, //是否需要解析geotiff 数据
+        needKriging: false, //是否需要使用克里金差值
+        needFrontWind: false, //前端风场
+        needEchart3: false,
+        needMav: false,
+        arcgisApiHost: 'http://202.104.140.38:81/arcgis_js_v330/api/3.30/'
+    };
+</script>
+
+<script src="http://202.104.140.38:81/powergis/demo/static/gis/plugin/jquery-1.11.1.min.js"></script>
+</head>
+
+
+<body>
+    <div id="map"></div>
+ 
+         <script src="http://202.104.140.38:81/powergis/demo/smaples/arcgis/gis/env.js"></script>
+        <script src="http://202.104.140.38:81/powergis/demo/smaples/arcgis/gis/PowerGis.umd.min.js"></script>
+    <script>
+        PowerGis.initLoad(initLoadEnd);
+        // window.addEventListener 
+        //加载完成
+        function initLoadEnd(params) {
+
+            window.map = PowerGis.addMap("map", {
+                logo: false,
+                extent: {
+                    xmax: 13459472.758735063,
+                    xmin: 13386093.211581392,
+                    ymax: 3709152.7042581164,
+                    ymin: 3672118.9640539982,
+                    "spatialReference": {
+                        "wkid": 102100
+                    },
+                }
+                // basemap: "gray",
+                // center: [-82.44109, 35.6122],
+                // zoom: 17
+            });
+
+            let mapObj = {
+                label: '高德地图',
+                type: 'gaodemap',
+                visible: true
+            }
+
+            window.map.on("click", function(evt) {
+                console.log(window.map.extent)
+            })
+
+
+            PowerGis.addBasLayer(window.map, mapObj);
+
+            let option = {
+                url: "http://202.104.140.38:81/arcgis/rest/services/SuZhouXCQ/XiangChen_STHJZT/MapServer",
+                layerId: "1?token=token12345",//添加token
+                where: "1=1", //或者使用具体的  OBJECTID='2',
+                returnGeometry: true, //是否返回坐标数据
+                outFiled: ["*"],
+            }
+
+            PowerGis.queryTask(option, function(data) {
+                console.log(data);
+                setDataInMap(data);
+            })
+
+
+            function setDataInMap(data) {
+
+                for (let i = 0; i < data.length; i++) {
+                    let item = data[i];
+                    item.attributes.title = item.attributes.NAME;
+                    item.attributes.ClickType = "ZD_CLICK";
+                    item.option = {
+                        color: [128, 1 * Math.random() * 100 * i, 255 * Math.random() * 100 * i, 0.7], //填充颜色
+                        tcstyle: "STYLE_SOLID", //填充样式
+                        lineColor: [128, 0, 255, 0.7], //设置符号线的颜色
+                        style: "STYLE_SOLID", //设置线的样式  详见：http://172.16.10.33/arcgis_js_v321_sdk/arcgis_js_api/sdk/jsapi/simplelinesymbol-amd.html#simplelinesymbol2  -> Constants
+                        lineWidth: 1 //线的宽度
+                    }
+                }
+                PowerGis.addMutiPolygon(window.map, "数据渲染", data);
+            }
+
+
+
+        }
+    </script>
+</body>
+
+</html>

@@ -45,19 +45,17 @@
           //In the sample below an element is added in the array at 3, 4, and 5 indexes.
           //Those array elements correspond to the layer id within the remote ArcGISDynamicMapServiceLayer
           var layerDefs = [];
-          /* layerDefs[5] = "STATE_NAME='Kansas'";
-          layerDefs[4] = "STATE_NAME='Kansas' and POP2007>25000";
-          layerDefs[3] = "STATE_NAME='Kansas' and POP2007>25000"; */
+          // layerDefs[0] = "OBJECTID in ('474','478')";
           imageParameters.layerDefinitions = layerDefs;
 
           //I want layers 5,4, and 3 to be visible
           imageParameters.layerIds = [0];
           imageParameters.layerOption = ImageParameters.LAYER_OPTION_SHOW;
           imageParameters.transparent = true;
-
+          
           //construct ArcGISDynamicMapServiceLayer with imageParameters from above
-          var dynamicMapServiceLayer = new ArcGISDynamicMapServiceLayer("http://10.45.189.251/onemap/geoscene/rest/services/HPZT/hpzt_shjandtrgkdy_2021/MapServer",
-            {"imageParameters": imageParameters});
+          let url = "http://10.45.189.251/onemap/geoscene/rest/services/XMZRYP/test_xmzryp_xmzryp/MapServer";
+          var dynamicMapServiceLayer = new ArcGISDynamicMapServiceLayer(url,{"imageParameters": imageParameters});
 
           map.addLayer(dynamicMapServiceLayer);
         });

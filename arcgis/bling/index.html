@@ -16,9 +16,23 @@
 
     <link
       rel="stylesheet"
-      href="http://localhost:8080/arcgis_js/arcgis_js_v414_api/arcgis_js_api/library/4.14/esri/themes/light/main.css"
+      href="http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/esri/themes/light/main.css"
     />
-    <script src="http://localhost:8080/arcgis_js/arcgis_js_v414_api/arcgis_js_api/library/4.14/dojo/dojo.js"></script>
+    <script>
+      var apiUrl = 'http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/';
+  
+      var dojoConfig = {
+        baseUrl: window.apiUrl + 'dojo',
+        locale: 'zh-cn', //小写才会生效
+        async: true,
+        /* packages: [{
+          name: 'widgets',
+          location: window.path + 'static/gis/gis-widgets'
+        }] */
+      };
+    </script>
+    <!-- <script src="http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/init.js"></script> -->
+    <script src="http://localhost/arcgis_js_v416_api/arcgis_js_api/library/4.16/dojo/dojo.js"></script>
 
     <style>
       html,
