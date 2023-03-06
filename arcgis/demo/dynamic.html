@@ -27,14 +27,15 @@
       require([
         "esri/map",
         "esri/layers/ArcGISDynamicMapServiceLayer",
+        "esri/layers/ArcGISTiledMapServiceLayer", 
         "esri/layers/ImageParameters",
         "dojo/domReady!"
       ],
-        function (Map, ArcGISDynamicMapServiceLayer, ImageParameters) {
+        function (Map, ArcGISDynamicMapServiceLayer, ArcGISTiledMapServiceLayer,ImageParameters) {
 
           map = new Map("mapDiv", {
             basemap: "streets",
-            center: [ 109.27339939948513,23.300557798114667],
+            center: [ 19.008308320780117,109.94178920883093],
             zoom: 8
           });
 
@@ -55,9 +56,13 @@
           
           //construct ArcGISDynamicMapServiceLayer with imageParameters from above
           let url = "http://10.45.189.251/onemap/geoscene/rest/services/XMZRYP/test_xmzryp_xmzryp/MapServer";
-          var dynamicMapServiceLayer = new ArcGISDynamicMapServiceLayer(url,{"imageParameters": imageParameters});
+          var layer = new ArcGISDynamicMapServiceLayer(url,{"imageParameters": imageParameters});
 
-          map.addLayer(dynamicMapServiceLayer);
+          url = 'http://172.16.30.128:8080/OneMapServer/rest/services/hainan2018nyx/MapServer';
+          var layer = new ArcGISTiledMapServiceLayer(url);
+          layer.id = '测试';
+
+          map.addLayer(layer);
         });
     </script>
   </head>
