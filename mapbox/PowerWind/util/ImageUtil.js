@@ -5,11 +5,12 @@
  export default function ImageUtil(option) {
     this.debug = false;
     this.canvas = document.createElement('canvas');
-    this.context2D = this.canvas.getContext('2d');
+    this.context2D = this.canvas.getContext('2d', { willReadFrequently: true });
     this.image = null; //初始图片
     this.bbox = null; //初始图片经纬度范围
     this.resolution = null; //初始图片像素对应经纬度大小
     this.rangeBbox = null; //当前范围
+    this.lastPixRange = null; // 上次的图片裁剪范围
     Object.assign(this, option);
     if (this.debug) {
         console.log('ImageUtil');
@@ -108,15 +109,73 @@ ImageUtil.prototype = {
      * @param {地图四角坐标} bbox2
      */
     resize(bbox2) {
-        let bbox = this.getCurrentBbox(this.bbox, bbox2);
-        if (!bbox) {
-            return;
+        let currentBbox = this.getCurrentBbox(this.bbox, bbox2);
+        let update = false;
+        if (!currentBbox) {
+            return update;
         }
-        let pixRange = this.getPixRange(bbox);
-        this.rangeBbox = this.fixBbox(pixRange);
-        this.canvas.width = pixRange.width;
-        this.canvas.height = pixRange.height;
-        this.cutImage(this.image, pixRange);
+        let pixRange = this.getPixRange(currentBbox);
+        let rangeBbox = this.fixBbox(pixRange);
+        let equals = this.equalsObject(pixRange, this.lastPixRange);
+        if (equals) {
+            let contains = this.containsBbox(rangeBbox, bbox2);
+            if (contains) {
+                // 地图范围超过了图片的分辨率
+                rangeBbox = bbox2;
+            }
+            update = contains;
+        } else {
+            update = true;
+        }
+        if (update) {
+            this.lastPixRange = pixRange;
+            this.rangeBbox = rangeBbox;
+            this.canvas.width = pixRange.width;
+            this.canvas.height = pixRange.height;
+            this.cutImage(this.image, pixRange);
+        }
+        return update;
+    },
+
+    equalsObject(obj1, obj2) {
+        let equals = false;
+        if (obj1 && obj2) {
+            for (let key in obj2) {
+                equals = obj2[key] == obj1[key];
+                if (!equals) {
+                    break;
+                }
+            }
+        }
+        return equals;
+    },
+
+    /**
+     * big 是否包含 small
+     * @param {bbox} big
+     * @param {bbox} small
+     * @returns
+     */
+    containsBbox(big, small) {
+        return (
+            big.xmin <= small.xmin &&
+            big.xmax >= small.xmax &&
+            big.ymin <= small.ymin &&
+            big.ymax >= small.ymax
+        );
+    },
+    // pixRange是否相同
+    equalsPixRange(pixRange, lastPixRange) {
+        let equals = false;
+        if (lastPixRange) {
+            for (let key in lastPixRange) {
+                equals = lastPixRange[key] == pixRange[key];
+                if (!equals) {
+                    break;
+                }
+            }
+        }
+        return equals;
     },
 
     /**

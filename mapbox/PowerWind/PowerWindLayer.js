@@ -64,6 +64,7 @@ export default function PowerWindLayer(option) {
     this.windData = null; // 风场数据
     this.particleStateResolution = 0;
     this.pxRatio = Math.max(Math.floor(window.devicePixelRatio) || 1, 2);
+    this.eventDelay = 60; // 事件响应延时
     this.matrix = null;
 
     this.windBuffer = null;
@@ -87,18 +88,16 @@ export default function PowerWindLayer(option) {
 
     Object.assign(this, option);
     this.resizeHandler = (e) => {
-        if (e.type == 'wheel') {
-            let zoom = this.map.getZoom();
-            this.particleDensity = this.updateParticleDensity(zoom);
-        }
-        let bounds = this.map.getBounds();
-        let bbox = {
-            xmin: bounds._sw.lng,
-            xmax: bounds._ne.lng,
-            ymin: bounds._sw.lat,
-            ymax: bounds._ne.lat,
-        };
-        this.resize(bbox);
+        clearTimeout(this.timerId);
+        this.timerId = setTimeout(() => {
+            if (e.type == 'wheel') {
+                let zoom = this.map.getZoom();
+                this.particleDensity = this.updateParticleDensity(zoom);
+            }
+            let date = new Date();
+            console.log(date.getSeconds() + ':' + date.getMilliseconds());
+            this.resize();
+        }, this.eventDelay);
     };
     if (this.debug) {
         console.log('PowerWindLayer');
@@ -185,12 +184,23 @@ PowerWindLayer.prototype = {
         this.imageUtil.setSourceImageData(this.windData.imageData, bbox, size);
     },
     // 范围重置
-    resize(bbox) {
+    resize() {
+        // console.log(new Date().getMilliseconds());
+        let bounds = this.map.getBounds();
+        let bbox = {
+            xmin: bounds._sw.lng,
+            xmax: bounds._ne.lng,
+            ymin: bounds._sw.lat,
+            ymax: bounds._ne.lat,
+        };
         let imageUtil = this.imageUtil;
         if (!imageUtil.image) {
             return;
         }
-        imageUtil.resize(bbox);
+        let update = imageUtil.resize(bbox);
+        if (!update) {
+            return;
+        }
         let canvas = imageUtil.canvas;
         let imageData = imageUtil.context2D.getImageData(0, 0, canvas.width, canvas.height);
         this.windTexture = createTexture(
@@ -201,14 +211,14 @@ PowerWindLayer.prototype = {
             imageData.height
         );
         let rangeBbox = imageUtil.rangeBbox;
-        let bounds = {
+        let rangeBounds = {
             _sw: new this.LngLat(rangeBbox.xmin, rangeBbox.ymin),
             _ne: new this.LngLat(rangeBbox.xmax, rangeBbox.ymax),
         };
-        this.initWindBuffer(bounds);
+        this.initWindBuffer(rangeBounds);
         // imageUtil.showCutImage('img-now');
 
-        this.calcParticleNum(bounds);
+        this.calcParticleNum(rangeBounds);
         this.initScreen();
         this.initParticles();
     },
@@ -373,7 +383,8 @@ PowerWindLayer.prototype = {
             return;
         }
         if (!this.windTexture) {
-            this.resizeHandler({ type: 'wheel' });
+             // this.resizeHandler({ type: 'wheel' });
+             this.resize();
         }
         this.matrix = matrix;
         gl.enable(gl.BLEND);
