@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>高德地图前端风场效果</title>
+    <link href="css/zui-theme-blue.css" rel="stylesheet"/>
+
+    <script type="text/javascript" src="http://webapi.amap.com/maps?v=1.4.6&key=edc8e8df3aa7f0b12776bb1329c8195b"></script>
+    <script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript" src="js/amap-wind.js"></script>
+    <style>
+        html,
+        body,
+        .map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        
+    </style>
+
+    <script type="text/javascript">
+        var map;
+        $(function () {
+            map = new AMap.Map('mapDiv', {
+                resizeEnable: true,
+                zoom:9,//级别
+                center: [118.86286,28.970237]
+            });
+
+            getData()
+        })
+
+        //加载数据
+        function getData() {
+            //https://sthjd.qz.gov.cn:32679/dataservice/sjcl/api//mobileapp/hjkq/czfcjson?lx=FC
+            //https://blog.sakitam.com/wind-layer/data/wind.json
+            let url = 'https://sthjd.qz.gov.cn:32679/dataservice/sjcl/api//mobileapp/hjkq/czfcjson?lx=FC';
+            url = '/resource/高德风场/衢州风场.json';
+            // url = './data/2021032618_WIND.json';
+            // url = 'https://sakitam.oss-cn-beijing.aliyuncs.com/codepen/wind-layer/json/wind.json';
+            
+            $.get(url, data =>{
+                console.log(data)
+                this.windLayer = new AMapWind.WindLayer(data,{
+                    windOptions:{
+                        globalAlpha:0.9,//粒子透明度
+                        velocityScale: 1/100,//粒子速度
+                        particleAge:10,
+                        paths:10000,//粒子数量
+                        colorScale:[
+                            "rgb(36,104,180)",
+                            "rgb(60,157, 194)",
+                            "rgb(128,205,193 )",
+                            "rgb(151,218,168 )",
+                            "rgb(198,231,181)",
+                            "rgb(238,247,217)",
+                            "rgb(255,238,159)",
+                            "rgb(252,217,125)",
+                            "rgb(255,182,100)",
+                            "rgb(252,150,75)",
+                            "rgb(250,112,52)",
+                            "rgb(245,64,32)",
+                            "rgb(237,45,28)",
+                            "rgb(220,24,32)",
+                            "rgb(180,0,35)"
+                        ],
+                        lineWidth: 2,
+                        generateParticleOption: false,
+                        // drawCoordsParticle:true
+                    },
+                    zIndex: 20
+                })
+                this.windLayer.appendTo(map)
+                window.windLayer = this.windLayer;
+            })
+        }
+
+
+
+      </script>
+  </head>
+  <body class="tundra">
+    <!--地图容器-->
+    <div id="mapDiv" class="map"></div>
+    <!--地图控制-->
+
+    
+</body>
+</html>
