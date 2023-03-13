@@ -14,8 +14,8 @@ define(["dojo/_base/declare"], function (declare) {
     createProgram(gl, vertexSource, fragmentSource) {
       var program = gl.createProgram();
 
-      var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexSource);
-      var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+      var vertexShader = this.createShader(gl, gl.VERTEX_SHADER, vertexSource);
+      var fragmentShader = this.createShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
 
       gl.attachShader(program, vertexShader);
       gl.attachShader(program, fragmentShader);

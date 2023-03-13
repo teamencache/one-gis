@@ -163,7 +163,7 @@ define(["dojo/_base/declare"], function (declare) {
 
         void main(){
             v_tex_pos = vec2(a_tex_pos.x,1.0- a_tex_pos.y);
-            gl_Position = u_matrix * vec4(a_pos, 1.0);
+            gl_Position = vec4(a_pos, 1.0);
         }
     `,
     rectFrag: `
@@ -179,7 +179,6 @@ define(["dojo/_base/declare"], function (declare) {
         vec4 color = texture2D(u_screen, v_tex_pos);
         // color.a = color.a * u_opacity;
         gl_FragColor = color;//vec4(floor(255.0 * color * u_opacity) / 255.0);
-        
         }
     `,
   };

@@ -4,3 +4,7 @@ node_modules
 .git
 *-lock.*
 *.zip
+arcgis/PowerGis/PowerWindLayer/index.html
+arcgis/PowerGis/frontWind.html
+arcgis/PowerGis/BackWind.html
+/resource/*

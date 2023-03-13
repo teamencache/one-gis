@@ -5,7 +5,9 @@ define(["dojo/_base/declare"], function (declare) {
   return declare(null, {
     constructor() {
       this.canvas = document.createElement("canvas");
-      this.context2D = this.canvas.getContext("2d");
+      this.context2D = this.canvas.getContext("2d", {
+        willReadFrequently:true
+      });
       this.image = null; //初始图片
       this.bbox = null; //初始图片经纬度范围
       this.resolution = null; //初始图片像素对应经纬度大小

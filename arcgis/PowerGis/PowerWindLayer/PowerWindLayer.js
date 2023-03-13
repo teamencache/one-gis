@@ -4,50 +4,56 @@ define([
   "dojo/dom-construct",
   "dojo/on",
   "esri/layers/layer",
-  "./util/ShaderUtil",
-  "./util/PowerFormater",
-  "./util/ImageUtil",
+  "esri/geometry/webMercatorUtils",
+  "./util/PowerWind",
 ], function (
   declare,
   lang,
   domConst,
   on,
   Layer,
-  ShaderUtil,
-  PowerFormater,
-  ImageUtil
+  webMercatorUtils,
+  PowerWind
 ) {
-  const {
-    createShader,
-    createProgram,
-    createTexture,
-    bindTexture,
-    createBuffer,
-    bindAttribute,
-    bindAttribute2,
-    bindFramebuffer,
-  } = ShaderUtil;
+
   return declare(Layer, {
+
     _element: null,
     _listeners: [],
-    imageUtil: new ImageUtil(),
-    powerWind:null,
+    mapType:'',// esri.Map,mapboxgl
+    powerModule:null,
+    _gl:null,
+    _intervalId:null,
+
+
     constructor: function (url, options) {
       this.inherited(arguments);
       console.log("PowerWindLayer");
       this.loaded = true;
+      this.powerModule = new PowerWind({
+        pxRatio:10
+      });
       this.onLoad(this);
+      this.resizeHandler = (e) => {
+        if (e.type == "wheel") {
+          let zoom = this.map.getZoom();
+          this.powerModule.particleDensity = this.updateParticleDensity(zoom);
+        }
+        this.powerModule.resize();
+      };
     },
 
+    requestAnimationFramePolyfill(callback) {
+      var now = new Date().getTime();
+      var timeToCall = Math.max(0, 16 - (now - lastTime));
+      var id = setTimeout(function() { callback(now + timeToCall); }, timeToCall);
+      lastTime = now + timeToCall;
+      return id;
+  },
+
+    // 设置风场数据
     setData: function (data) {
-      let windData = PowerFormater.formatWindData(data);
-      this.imageUtil.setSourceImageData(windData.imageData, windData.bbox, {
-        width: windData.width,
-        height: windData.height,
-      });
-      // imageUtil.flipImageData('Y');
-      let image = this.imageUtil.image;
-      windData.image = image;
+      this.powerModule.setDataByJson(data);
     },
 
     _setMap: function (map, container) {
@@ -63,27 +69,43 @@ define([
         container
       );
       this._initListeners();
+      this._gl = this._element.getContext('webgl');
+      this.powerModule.onAdd(map, this._gl);
+      
+      this._intervalId = setInterval(() => {
+        this.powerModule.render(this._gl);
+      }, 60);
       return this._element;
     },
     _unsetMap: function () {
       this.inherited(arguments);
       var forceOff = true;
       this._toggleListeners(forceOff);
-      this._clearCanvas();
+      // this._clearCanvas();
+      this.powerModule.onRemove(map, this._gl);
     },
     clear: function () {
       this.inherited(arguments);
       this._clearCanvas();
     },
-    _panCanvas: function () {
+
+    _panCanvas: function (e) {
+      this.resizeHandler(e);
       console.log("pan");
+    },
+    _extentChange:function(e){
+      console.log('extent');
+      this.resizeHandler(e)
+    },
+    _zoomChange:function(e){
+      console.log('zoom');
+      this.resizeHandler(e)
     },
     _resizeCanvas: function () {
       console.log("resize");
     },
-    _redrawCanvas: function () {
-      let extent = PowerGis.webMercatorToGeographic(this._map.extent);
-      this.imageUtil.test(extent);
+    _redrawCanvas: function (e) {
+      
     },
     _clearCanvas: function () {
       console.log("clear");
@@ -110,13 +132,13 @@ define([
         on.pausable(
           this._map,
           "extent-change",
-          lang.hitch(this, "_redrawCanvas")
+          lang.hitch(this, "_extentChange")
         )
       );
 
       // when user begins zooming the map
       this._listeners.push(
-        on.pausable(this._map, "zoom-start", lang.hitch(this, "_clearCanvas"))
+        on.pausable(this._map, "zoom", lang.hitch(this, "_zoomChange"))
       );
 
       // when user is actively panning the map

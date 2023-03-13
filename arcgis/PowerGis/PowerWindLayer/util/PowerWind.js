@@ -4,7 +4,8 @@ define([
   "./ShaderStr",
   "./ShaderUtil",
   "./ImageUtil",
-], function (declare, shaderStr, ShaderUtil, ImageUtil) {
+  "./WindFormat",
+], function (declare, shaderStr, shaderUtil, ImageUtil, WindFormat) {
   const {
     drawVert,
     drawFrag,
@@ -15,7 +16,7 @@ define([
     rectFrag,
   } = shaderStr;
 
-  const {
+ /*  const {
     createShader,
     createProgram,
     createTexture,
@@ -24,14 +25,14 @@ define([
     bindAttribute,
     bindAttribute2,
     bindFramebuffer,
-  } = ShaderUtil;
+  } = ShaderUtil; */
 
   return declare(null, {
     constructor(option) {
-      this.id = option.id;
+      /* this.id = option.id;
       this.type = "custom";
       this.renderingMode = "3d";
-      this.MercatorCoordinate = null; //mapboxgl.MercatorCoordinate
+      this.MercatorCoordinate = null; //mapboxgl.MercatorCoordinate */
       this.defaultRampColors = {
         0.0: "#3288bd",
         0.1: "#66c2a5",
@@ -51,6 +52,7 @@ define([
       this.map = null;
       this.gl = null;
       this.imageUtil = new ImageUtil();
+      this.windFormat = new WindFormat();
 
       this.fadeOpacity = 0.98; // how fast the particle trails fade on each frame
       this.speedFactor = 0.6; //0.25; // how fast the particles move
@@ -87,20 +89,12 @@ define([
       this.particleStateTexture2 = null;
 
       Object.assign(this, option);
-      this.resizeHandler = (e) => {
-        let bbox = this.map.getBounds();
-        if (e.type == "wheel") {
-          let zoom = this.map.getZoom();
-          this.particleDensity = this.updateParticleDensity(zoom);
-        }
-        this.resize(bbox);
-      };
     },
     init(gl) {
-      this.drawProgram = createProgram(gl, drawVert, drawFrag);
-      this.screenProgram = createProgram(gl, quadVert, screenFrag);
-      this.updateProgram = createProgram(gl, quadVert, updateFrag);
-      this.rectProgram = createProgram(gl, rectVert, rectFrag);
+      this.drawProgram = shaderUtil.createProgram(gl, drawVert, drawFrag);
+      this.screenProgram = shaderUtil.createProgram(gl, quadVert, screenFrag);
+      this.updateProgram = shaderUtil.createProgram(gl, quadVert, updateFrag);
+      this.rectProgram = shaderUtil.createProgram(gl, rectVert, rectFrag);
       this.frameBuffer = gl.createFramebuffer();
       this.initColorRampTexture(this.defaultRampColors);
       /* eslint-disable */
@@ -109,13 +103,13 @@ define([
         0, 1, 1, 0, 1, 1,
       ];
       /* eslint-enable */
-      this.quadBuffer = createBuffer(gl, new Float32Array(vertices));
+      this.quadBuffer = shaderUtil.createBuffer(gl, new Float32Array(vertices));
     },
     // 生成色带纹理
     initColorRampTexture(colors) {
       let imageUtil = this.imageUtil;
       let imageData = imageUtil.getColorRampData(colors);
-      this.colorRampTexture = createTexture(
+      this.colorRampTexture = shaderUtil.createTexture(
         this.gl,
         this.gl.LINEAR,
         imageData,
@@ -140,15 +134,53 @@ define([
               "bbox2": Bounds,
           }
       */
-    setData(windData) {
-      this.windData = windData;
-      this.imageUtil.setSourceImage(this.windData.image, this.windData.bbox);
+    setDataByJson(windData) {
+      this.windData = this.windFormat.formatWindJson(windData);
+        let { xmin, xmax, ymin, ymax, width, height } = this.windData;
+        let bbox = { xmin, xmax, ymin, ymax };
+        bbox.ymax = ymin;
+        bbox.ymin = ymax;
+        let size = { width, height };
+        this.imageUtil.setSourceImageData(this.windData.imageData, bbox, size);
+        // this.imageUtil.showCutImage('img-now');
     },
+    // 通过插值图片设置风场数据
+    setDataByImage(url) {
+      let image = new Image();
+      image.onload = () => {
+          let imageUtil = this.imageUtil;
+          let width = image.width;
+          let height = image.height;
+          imageUtil.setSourceImage(image);
+          let context2D = imageUtil.context2D;
+          context2D.drawImage(image, 0, 0);
+          let headImageData = context2D.getImageData(0, 0, width, 1);
+          let windData = this.windFormat.decodeWindHead(headImageData);
+          windData.width = width;
+          windData.height = height - 1;
+          imageUtil.canvas.height = windData.height;
+          context2D.drawImage(image, 0, 1, width, height, 0, 0, width, windData.height);
+          image.onload = undefined;
+          image.src = imageUtil.canvas.toDataURL();
+          image.height = windData.height;
+          imageUtil.image = image;
+          windData.image = image;
+          let { xmin, xmax, ymin, ymax } = windData;
+          let bbox = { xmin, xmax, ymin, ymax };
+          bbox.xmin = xmax;
+          bbox.xmax = xmin;
+          imageUtil.initResolution(bbox);
+          this.windData = windData;
+          // imageUtil.showCutImage('img-now');
+      };
+      image.src = url;
+  },
     // 范围重置
-    resize(bbox) {
+    resize() {
+      let bbox = this.windFormat.getBbox();
       this.imageUtil.resize(bbox);
       let imageData = this.imageUtil.getImageData();
-      this.windTexture = createTexture(
+      this.windTexture = shaderUtil.createTexture(
         this.gl,
         this.gl.NEAREST, //LINEAR, //this.gl.NEAREST,
         new Uint8Array(imageData.data),
@@ -156,10 +188,10 @@ define([
         imageData.height
       );
 
-      this.initWindBuffer(this.imageUtil.bbox);
-      // this.imageUtil.showCutImage('img-now');
+      this.initWindBuffer(this.imageUtil.rangeBbox);
+      this.imageUtil.showCutImage('img-now');
 
-      this.calcParticleNum(this.imageUtil.bbox);
+      this.calcParticleNum(this.imageUtil.rangeBbox);
       this.initScreen();
       this.initParticles();
     },
@@ -191,9 +223,12 @@ define([
     },
     // 初始化风场范围顶点缓冲
     initWindBuffer(bbox) {
-      let ne = this.MercatorCoordinate.fromLngLat(bbox._ne);
+      /* let ne = this.MercatorCoordinate.fromLngLat(bbox._ne);
       let sw = this.MercatorCoordinate.fromLngLat(bbox._sw);
-      let z = ne.meterInMercatorCoordinateUnits() * this.altitude;
+      let z = ne.meterInMercatorCoordinateUnits() * this.altitude; */
+      let sw = this.windFormat.toVertice({x:bbox.xmin,y:bbox.ymin}, 'EsriMap', this.map);
+      let ne = this.windFormat.toVertice({x:bbox.xmax,y:bbox.ymax}, 'EsriMap', this.map);
+      let z = 0;
       /* eslint-disable */
       let vertices = [
         sw.x,
@@ -229,18 +264,24 @@ define([
       ];
       /* eslint-enable */
       vertices = new Float32Array(vertices);
-      this.windBuffer = createBuffer(this.gl, vertices);
+      this.windBuffer = shaderUtil.createBuffer(this.gl, vertices);
     },
     /**
      * 根据bbox计算粒子数量
      * @param {} bbox 绘制风场的四角坐标范围
      */
     calcParticleNum(bbox) {
-      let position = {
+      /* let position = {
         _ne: this.map.project(bbox._ne),
         _sw: this.map.project(bbox._sw),
         _nw: this.map.project([bbox._sw.lng, bbox._ne.lat]),
         _se: this.map.project([bbox._ne.lng, bbox._sw.lat]),
+      }; */
+      let position = {
+        _ne: this.windFormat.toScreen({x:bbox.xmax,y:bbox.ymax}, 'EsriMap', this.map),
+        _sw: this.windFormat.toScreen({x:bbox.xmin,y:bbox.ymin}, 'EsriMap', this.map),
+        _nw: this.windFormat.toScreen({x:bbox.xmin,y:bbox.ymax}, 'EsriMap', this.map),
+        _se: this.windFormat.toScreen({x:bbox.xmax,y:bbox.ymin}, 'EsriMap', this.map),
       };
       let size = {
         n: this.calcScreenLength(position._ne, position._nw),
@@ -275,14 +316,14 @@ define([
         particleState[i] = Math.floor(Math.random() * 256); // randomize the initial particle positions
       }
       // textures to hold the particle state for the current and the next frame
-      this.particleStateTexture1 = createTexture(
+      this.particleStateTexture1 = shaderUtil.createTexture(
         gl,
         gl.NEAREST,
         particleState,
         this.particleStateResolution,
         this.particleStateResolution
       );
-      this.particleStateTexture2 = createTexture(
+      this.particleStateTexture2 = shaderUtil.createTexture(
         gl,
         gl.NEAREST,
         particleState,
@@ -294,21 +335,21 @@ define([
       for (let i$1 = 0; i$1 < this.numParticles; i$1++) {
         particleIndices[i$1] = i$1;
       }
-      this.particleIndexBuffer = createBuffer(gl, particleIndices);
+      this.particleIndexBuffer = shaderUtil.createBuffer(gl, particleIndices);
     },
     //屏幕纹理初始化
     initScreen() {
       let width = this.windWidth * this.pxRatio;
       let height = this.windHeight * this.pxRatio;
       let emptyPixels = new Uint8Array(width * height * 4);
-      this.screenTexture1 = createTexture(
+      this.screenTexture1 = shaderUtil.createTexture(
         this.gl,
         this.gl.NEAREST,
         emptyPixels,
         width,
         height
       );
-      this.screenTexture2 = createTexture(
+      this.screenTexture2 = shaderUtil.createTexture(
         this.gl,
         this.gl.NEAREST,
         emptyPixels,
@@ -327,9 +368,8 @@ define([
       this.map = map;
       this.gl = gl;
       this.init(gl);
-      this.toggleMapEvent();
-      // 必须要render中触发才行
-      // this.resizeHandler({ type: 'wheel' });
+      this.windFormat.setMap(map);
+      this.resize();
     },
     // 地图事件绑定与解除
     toggleMapEvent(isRemove) {
@@ -365,16 +405,21 @@ define([
     },
     render: function (gl, matrix) {
       if (!this.windTexture) {
-        this.resizeHandler({ type: "wheel" });
+        // this.resizeHandler({ type: "wheel" });
+        return
       }
+      gl.viewport(0, 0, this.map.width, this.map.height);
+      /* shaderUtil.bindTexture(this.gl, this.windTexture, 0);
+      shaderUtil.bindTexture(this.gl, this.particleStateTexture1, 1);
+      this.drawQuad(this.windTexture, 1.0); */
       this.matrix = matrix;
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.gl.disable(this.gl.DEPTH_TEST);
       this.gl.disable(this.gl.STENCIL_TEST);
       // 绘制当前帧风场
-      bindTexture(this.gl, this.windTexture, 0);
-      bindTexture(this.gl, this.particleStateTexture1, 1);
+      shaderUtil.bindTexture(this.gl, this.windTexture, 0);
+      shaderUtil.bindTexture(this.gl, this.particleStateTexture1, 1);
       this.time = this.time || 0;
       this.gl.enable(this.gl.BLEND);
       this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
@@ -383,18 +428,18 @@ define([
       this.gl.disable(this.gl.BLEND);
       let width = this.windWidth * this.pxRatio;
       let height = this.windHeight * this.pxRatio;
-      bindFramebuffer(this.gl, this.frameBuffer, this.screenTexture1);
+      shaderUtil.bindFramebuffer(this.gl, this.frameBuffer, this.screenTexture1);
       this.gl.viewport(0, 0, width, height);
       this.drawTexture(this.screenTexture2, this.fadeOpacity);
       this.drawParticles();
-      bindFramebuffer(this.gl, null);
+      shaderUtil.bindFramebuffer(this.gl, null);
       this.time += 1;
 
       let temp = this.screenTexture1;
       this.screenTexture1 = this.screenTexture2;
       this.screenTexture2 = temp;
       // 更新粒子位置
-      bindFramebuffer(this.gl, this.frameBuffer, this.particleStateTexture2);
+      shaderUtil.bindFramebuffer(this.gl, this.frameBuffer, this.particleStateTexture2);
       this.gl.viewport(
         0,
         0,
@@ -402,12 +447,12 @@ define([
         this.particleStateResolution
       );
       this.updateParticles();
-      bindFramebuffer(this.gl, null);
+      shaderUtil.bindFramebuffer(this.gl, null);
       temp = this.particleStateTexture1;
       this.particleStateTexture1 = this.particleStateTexture2;
       this.particleStateTexture2 = temp;
       // 触发重复绘制
-      this.map.triggerRepaint();
+      // this.map.triggerRepaint();
     },
     // 绘制纹理
     drawTexture(texture, opacity) {
@@ -416,11 +461,11 @@ define([
       let buffer = this.quadBuffer;
 
       gl.useProgram(wrapper.program);
-      bindTexture(gl, texture, 2);
+      shaderUtil.bindTexture(gl, texture, 2);
       gl.uniform1i(wrapper.u_screen, 2);
       gl.uniform1f(wrapper.u_opacity, opacity);
 
-      bindAttribute2(
+      shaderUtil.bindAttribute2(
         gl,
         buffer,
         wrapper.a_pos,
@@ -429,7 +474,7 @@ define([
         0,
         Float32Array.BYTES_PER_ELEMENT
       );
-      bindAttribute2(
+      shaderUtil.bindAttribute2(
         gl,
         buffer,
         wrapper.a_tex_pos,
@@ -447,12 +492,12 @@ define([
       let buffer = this.windBuffer;
 
       gl.useProgram(wrapper.program);
-      bindTexture(gl, texture, 2);
+      shaderUtil.bindTexture(gl, texture, 2);
       gl.uniform1i(wrapper.u_screen, 2);
       gl.uniform1f(wrapper.u_opacity, opacity);
-      gl.uniformMatrix4fv(wrapper.u_matrix, false, this.matrix);
+      // gl.uniformMatrix4fv(wrapper.u_matrix, false, this.matrix);
 
-      bindAttribute2(
+      shaderUtil.bindAttribute2(
         gl,
         buffer,
         wrapper.a_pos,
@@ -461,7 +506,7 @@ define([
         0,
         Float32Array.BYTES_PER_ELEMENT
       );
-      bindAttribute2(
+      shaderUtil.bindAttribute2(
         gl,
         buffer,
         wrapper.a_tex_pos,
@@ -477,7 +522,7 @@ define([
       let gl = this.gl;
       let wrapper = this.drawProgram;
       gl.useProgram(wrapper.program);
-      bindAttribute2(
+      shaderUtil.bindAttribute2(
         gl,
         this.particleIndexBuffer,
         wrapper.a_index,
@@ -486,11 +531,11 @@ define([
         0,
         Float32Array.BYTES_PER_ELEMENT
       );
-      bindTexture(gl, this.windTexture, 0);
+      shaderUtil.bindTexture(gl, this.windTexture, 0);
       gl.uniform1i(wrapper.u_wind, 0);
-      bindTexture(gl, this.particleStateTexture1, 1);
+      shaderUtil.bindTexture(gl, this.particleStateTexture1, 1);
       gl.uniform1i(wrapper.u_particles, 1);
-      bindTexture(gl, this.colorRampTexture, 2);
+      shaderUtil.bindTexture(gl, this.colorRampTexture, 2);
       gl.uniform1i(wrapper.u_color_ramp, 2);
 
       gl.uniform2f(wrapper.u_wind_min, this.windData.uMin, this.windData.vMin);
@@ -508,7 +553,7 @@ define([
       gl.useProgram(wrapper.program);
 
       // bindAttribute(gl, this.quadBuffer, wrapper.a_pos, 2);
-      bindAttribute2(
+      shaderUtil.bindAttribute2(
         gl,
         buffer,
         wrapper.a_pos,
@@ -517,7 +562,7 @@ define([
         0,
         Float32Array.BYTES_PER_ELEMENT
       );
-      bindAttribute2(
+      shaderUtil.bindAttribute2(
         gl,
         buffer,
         wrapper.a_tex_pos,
@@ -527,9 +572,9 @@ define([
         Float32Array.BYTES_PER_ELEMENT
       );
 
-      bindTexture(gl, this.windTexture, 0);
+      shaderUtil.bindTexture(gl, this.windTexture, 0);
       gl.uniform1i(wrapper.u_wind, 0);
-      bindTexture(gl, this.particleStateTexture1, 1);
+      shaderUtil.bindTexture(gl, this.particleStateTexture1, 1);
       gl.uniform1i(wrapper.u_particles, 1);
 
       gl.uniform1f(wrapper.u_rand_seed, Math.random());
