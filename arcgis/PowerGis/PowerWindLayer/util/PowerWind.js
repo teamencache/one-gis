@@ -16,7 +16,7 @@ define([
     rectFrag,
   } = shaderStr;
 
- /*  const {
+  /*  const {
     createShader,
     createProgram,
     createTexture,
@@ -136,60 +136,74 @@ define([
       */
     setDataByJson(windData) {
       this.windData = this.windFormat.formatWindJson(windData);
-        let { xmin, xmax, ymin, ymax, width, height } = this.windData;
-        let bbox = { xmin, xmax, ymin, ymax };
-        bbox.ymax = ymin;
-        bbox.ymin = ymax;
-        let size = { width, height };
-        this.imageUtil.setSourceImageData(this.windData.imageData, bbox, size);
-        // this.imageUtil.showCutImage('img-now');
+      let { xmin, xmax, ymin, ymax, width, height } = this.windData;
+      let bbox = { xmin, xmax, ymin, ymax };
+      bbox.ymax = ymin;
+      bbox.ymin = ymax;
+      let size = { width, height };
+      this.imageUtil.setSourceImageData(this.windData.imageData, bbox, size);
+      // this.imageUtil.showCutImage('img-now');
+      this.resize();
     },
     // 通过插值图片设置风场数据
     setDataByImage(url) {
       let image = new Image();
       image.onload = () => {
-          let imageUtil = this.imageUtil;
-          let width = image.width;
-          let height = image.height;
-          imageUtil.setSourceImage(image);
-          let context2D = imageUtil.context2D;
-          context2D.drawImage(image, 0, 0);
-          let headImageData = context2D.getImageData(0, 0, width, 1);
-          let windData = this.windFormat.decodeWindHead(headImageData);
-          windData.width = width;
-          windData.height = height - 1;
-          imageUtil.canvas.height = windData.height;
-          context2D.drawImage(image, 0, 1, width, height, 0, 0, width, windData.height);
-          image.onload = undefined;
-          image.src = imageUtil.canvas.toDataURL();
-          image.height = windData.height;
-          imageUtil.image = image;
-          windData.image = image;
-          let { xmin, xmax, ymin, ymax } = windData;
-          let bbox = { xmin, xmax, ymin, ymax };
-          bbox.xmin = xmax;
-          bbox.xmax = xmin;
-          imageUtil.initResolution(bbox);
-          this.windData = windData;
-          // imageUtil.showCutImage('img-now');
+        let imageUtil = this.imageUtil;
+        let width = image.width;
+        let height = image.height;
+        imageUtil.setSourceImage(image);
+        let context2D = imageUtil.context2D;
+        context2D.drawImage(image, 0, 0);
+        let headImageData = context2D.getImageData(0, 0, width, 1);
+        let windData = this.windFormat.decodeWindHead(headImageData);
+        windData.width = width;
+        windData.height = height - 1;
+        imageUtil.canvas.height = windData.height;
+        context2D.drawImage(
+          image,
+          0,
+          1,
+          width,
+          height,
+          0,
+          0,
+          width,
+          windData.height
+        );
+        image.onload = undefined;
+        image.src = imageUtil.canvas.toDataURL();
+        image.height = windData.height;
+        imageUtil.image = image;
+        windData.image = image;
+        let { xmin, xmax, ymin, ymax } = windData;
+        let bbox = { xmin, xmax, ymin, ymax };
+        bbox.xmin = xmax;
+        bbox.xmax = xmin;
+        imageUtil.initResolution(bbox);
+        this.windData = windData;
+        // imageUtil.showCutImage('img-now');
+        this.resize();
       };
       image.src = url;
-  },
-    // 范围重置
+    },
+    bbox: null,
     resize() {
       let bbox = this.windFormat.getBbox();
+      this.bbox = bbox;
+      this.initMatrix();
       this.imageUtil.resize(bbox);
       let imageData = this.imageUtil.getImageData();
       this.windTexture = shaderUtil.createTexture(
         this.gl,
-        this.gl.NEAREST, //LINEAR, //this.gl.NEAREST,
+        this.gl.LINEAR, //LINEAR, //this.gl.NEAREST,
         new Uint8Array(imageData.data),
         imageData.width,
         imageData.height
       );
 
       this.initWindBuffer(this.imageUtil.rangeBbox);
-      this.imageUtil.showCutImage('img-now');
+      // this.imageUtil.showCutImage('img-now');
 
       this.calcParticleNum(this.imageUtil.rangeBbox);
       this.initScreen();
@@ -219,15 +233,23 @@ define([
           lastZoom = currZoom;
         }
       }
-      return density;
+      this.particleDensity = density;
     },
     // 初始化风场范围顶点缓冲
     initWindBuffer(bbox) {
       /* let ne = this.MercatorCoordinate.fromLngLat(bbox._ne);
       let sw = this.MercatorCoordinate.fromLngLat(bbox._sw);
       let z = ne.meterInMercatorCoordinateUnits() * this.altitude; */
-      let sw = this.windFormat.toVertice({x:bbox.xmin,y:bbox.ymin}, 'EsriMap', this.map);
-      let ne = this.windFormat.toVertice({x:bbox.xmax,y:bbox.ymax}, 'EsriMap', this.map);
+      let sw = this.windFormat.toVertice(
+        { x: bbox.xmin, y: bbox.ymin },
+        "EsriMap",
+        this.map
+      );
+      let ne = this.windFormat.toVertice(
+        { x: bbox.xmax, y: bbox.ymax },
+        "EsriMap",
+        this.map
+      );
       let z = 0;
       /* eslint-disable */
       let vertices = [
@@ -278,10 +300,26 @@ define([
         _se: this.map.project([bbox._ne.lng, bbox._sw.lat]),
       }; */
       let position = {
-        _ne: this.windFormat.toScreen({x:bbox.xmax,y:bbox.ymax}, 'EsriMap', this.map),
-        _sw: this.windFormat.toScreen({x:bbox.xmin,y:bbox.ymin}, 'EsriMap', this.map),
-        _nw: this.windFormat.toScreen({x:bbox.xmin,y:bbox.ymax}, 'EsriMap', this.map),
-        _se: this.windFormat.toScreen({x:bbox.xmax,y:bbox.ymin}, 'EsriMap', this.map),
+        _ne: this.windFormat.toScreen(
+          { x: bbox.xmax, y: bbox.ymax },
+          "EsriMap",
+          this.map
+        ),
+        _sw: this.windFormat.toScreen(
+          { x: bbox.xmin, y: bbox.ymin },
+          "EsriMap",
+          this.map
+        ),
+        _nw: this.windFormat.toScreen(
+          { x: bbox.xmin, y: bbox.ymax },
+          "EsriMap",
+          this.map
+        ),
+        _se: this.windFormat.toScreen(
+          { x: bbox.xmax, y: bbox.ymin },
+          "EsriMap",
+          this.map
+        ),
       };
       let size = {
         n: this.calcScreenLength(position._ne, position._nw),
@@ -369,7 +407,7 @@ define([
       this.gl = gl;
       this.init(gl);
       this.windFormat.setMap(map);
-      this.resize();
+      // this.resize();
     },
     // 地图事件绑定与解除
     toggleMapEvent(isRemove) {
@@ -403,16 +441,22 @@ define([
       this.gl.deleteTexture(this.particleStateTexture1);
       this.gl.deleteTexture(this.particleStateTexture2);
     },
+    initMatrix(bbox) {
+      this.matrix = this.windFormat.translateBbox(this.bbox, bbox);
+    },
     render: function (gl, matrix) {
       if (!this.windTexture) {
-        // this.resizeHandler({ type: "wheel" });
-        return
+        this.resize();
+        // return
+      }
+      if (matrix) {
+        this.matrix = matrix;
       }
       gl.viewport(0, 0, this.map.width, this.map.height);
       /* shaderUtil.bindTexture(this.gl, this.windTexture, 0);
       shaderUtil.bindTexture(this.gl, this.particleStateTexture1, 1);
       this.drawQuad(this.windTexture, 1.0); */
-      this.matrix = matrix;
+
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.gl.disable(this.gl.DEPTH_TEST);
@@ -428,7 +472,11 @@ define([
       this.gl.disable(this.gl.BLEND);
       let width = this.windWidth * this.pxRatio;
       let height = this.windHeight * this.pxRatio;
-      shaderUtil.bindFramebuffer(this.gl, this.frameBuffer, this.screenTexture1);
+      shaderUtil.bindFramebuffer(
+        this.gl,
+        this.frameBuffer,
+        this.screenTexture1
+      );
       this.gl.viewport(0, 0, width, height);
       this.drawTexture(this.screenTexture2, this.fadeOpacity);
       this.drawParticles();
@@ -439,7 +487,11 @@ define([
       this.screenTexture1 = this.screenTexture2;
       this.screenTexture2 = temp;
       // 更新粒子位置
-      shaderUtil.bindFramebuffer(this.gl, this.frameBuffer, this.particleStateTexture2);
+      shaderUtil.bindFramebuffer(
+        this.gl,
+        this.frameBuffer,
+        this.particleStateTexture2
+      );
       this.gl.viewport(
         0,
         0,
@@ -495,7 +547,7 @@ define([
       shaderUtil.bindTexture(gl, texture, 2);
       gl.uniform1i(wrapper.u_screen, 2);
       gl.uniform1f(wrapper.u_opacity, opacity);
-      // gl.uniformMatrix4fv(wrapper.u_matrix, false, this.matrix);
+      gl.uniformMatrix4fv(wrapper.u_matrix, false, this.matrix);
 
       shaderUtil.bindAttribute2(
         gl,

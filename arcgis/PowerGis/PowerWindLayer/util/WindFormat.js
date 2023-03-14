@@ -135,6 +135,11 @@ define(["dojo/_base/declare", "./ImageUtil"], function (declare, ImageUtil) {
     }
     return bbox;
   },
+  bbox2Screen(bbox){
+    let sw = this.toScreen({x:bbox.xmin, y:bbox.ymin});
+    let ne = this.toScreen({x:bbox.xmax, y:bbox.ymax});
+    return {sw,ne}
+  },
   // 点位坐标转为屏幕坐标
   toScreen(mapPoint){
       let screen;
@@ -156,19 +161,46 @@ define(["dojo/_base/declare", "./ImageUtil"], function (declare, ImageUtil) {
       switch (this.mapType) {
         case 'EsriMap':
           screen = this.toScreen(mapPoint, this.mapType, this.map);
-          vertice = [screen.x - width/2, height/2-screen.y, 0];
-          vertice[0] = vertice[0]/(width/2);
-          vertice[1] = vertice[1]/(height/2);
+          vertice = {
+            x:(screen.x - width/2)/(width/2),
+            y:(height/2-screen.y)/(height/2),
+            z:0,
+          }
           break;
         case 'MapboxglMap':
           vertice = this.MercatorCoordinate.fromLngLat(mapPoint);
           break;
       }
-      return {
-        x:vertice[0],
-        y:vertice[1],
-        z:0,
+      return vertice;
+  },
+
+  /**
+   * 生成从bbox1移动到bbox2得矩阵
+   * @param {*} bbox1 
+   * @param {*} bbox2 
+   */
+  translateBbox(bbox1, bbox2){
+    let matrix = glMatrix.mat4.create();
+    if(!bbox2){
+      bbox2 = this.getBbox();
+    }
+    if(bbox1){
+      let center1 = {
+        x:(bbox1.xmin + bbox1.xmax)/2,
+        y:(bbox1.ymin + bbox1.ymax)/2,
       };
+      let center2 = {
+        x:(bbox2.xmin + bbox2.xmax)/2,
+        y:(bbox2.ymin + bbox2.ymax)/2,
+      };
+      let vertice1 = this.toVertice(center1);
+      let vertice2 = this.toVertice(center2);
+      
+      let x = vertice1.x-vertice2.x;
+      let y = vertice1.y-vertice2.y;
+      glMatrix.mat4.translate(matrix, matrix, [x,y,0]);
+    }
+    return matrix;
   },
 
   replaceStringWithObjProps(str, obj) {

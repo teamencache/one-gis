@@ -163,7 +163,7 @@ define(["dojo/_base/declare"], function (declare) {
 
         void main(){
             v_tex_pos = vec2(a_tex_pos.x,1.0- a_tex_pos.y);
-            gl_Position = vec4(a_pos, 1.0);
+            gl_Position = u_matrix * vec4(a_pos, 1.0);
         }
     `,
     rectFrag: `
