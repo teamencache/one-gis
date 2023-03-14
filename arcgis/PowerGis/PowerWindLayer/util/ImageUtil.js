@@ -42,8 +42,10 @@ define(["dojo/_base/declare"], function (declare) {
           imageData.data[index2 + 3] = data[index1 + 3];
         }
       }
-      this.image = this.toImage(imageData);
-      this.initResolution(bbox);
+      this.toImage(imageData).then(image=>{
+        this.image = image;
+        this.initResolution(bbox);
+      });
     },
     // 图片分辨率
     initResolution(bbox) {
@@ -75,7 +77,9 @@ define(["dojo/_base/declare"], function (declare) {
           newData.data[index2 + 3] = oldData.data[index1 + 3];
         }
       }
-      this.image = this.toImage(newData);
+      this.toImage(newData).then(image=>{
+        this.image = image;
+      });
     },
     // 计算翻转后的像素索引
     flipIndex(axis, width, height, x, y) {
@@ -189,11 +193,15 @@ define(["dojo/_base/declare"], function (declare) {
     // 生成图片
     toImage(imageData) {
       this.context2D.putImageData(imageData, 0, 0);
-      let image = new Image();
-      image.width = this.canvas.width;
-      image.height = this.canvas.height;
-      image.src = this.canvas.toDataURL();
-      return image;
+      return new Promise(resolve=>{
+        let image = new Image();
+        image.onload = function(){
+          resolve(image);
+        }
+        image.width = this.canvas.width;
+        image.height = this.canvas.height;
+        image.src = this.canvas.toDataURL();
+      })
     },
     getImageData() {
       return this.context2D.getImageData(

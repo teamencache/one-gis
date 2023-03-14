@@ -142,7 +142,6 @@ define([
       bbox.ymin = ymax;
       let size = { width, height };
       this.imageUtil.setSourceImageData(this.windData.imageData, bbox, size);
-      // this.imageUtil.showCutImage('img-now');
       this.resize();
     },
     // 通过插值图片设置风场数据
@@ -182,17 +181,20 @@ define([
         bbox.xmax = xmin;
         imageUtil.initResolution(bbox);
         this.windData = windData;
-        // imageUtil.showCutImage('img-now');
         this.resize();
       };
       image.src = url;
     },
     bbox: null,
     resize() {
+      if(!this.imageUtil.image){
+        return
+      }
       let bbox = this.windFormat.getBbox();
       this.bbox = bbox;
       this.initMatrix();
       this.imageUtil.resize(bbox);
+      
       let imageData = this.imageUtil.getImageData();
       this.windTexture = shaderUtil.createTexture(
         this.gl,
@@ -300,26 +302,10 @@ define([
         _se: this.map.project([bbox._ne.lng, bbox._sw.lat]),
       }; */
       let position = {
-        _ne: this.windFormat.toScreen(
-          { x: bbox.xmax, y: bbox.ymax },
-          "EsriMap",
-          this.map
-        ),
-        _sw: this.windFormat.toScreen(
-          { x: bbox.xmin, y: bbox.ymin },
-          "EsriMap",
-          this.map
-        ),
-        _nw: this.windFormat.toScreen(
-          { x: bbox.xmin, y: bbox.ymax },
-          "EsriMap",
-          this.map
-        ),
-        _se: this.windFormat.toScreen(
-          { x: bbox.xmax, y: bbox.ymin },
-          "EsriMap",
-          this.map
-        ),
+        _ne: this.windFormat.toScreen({ x: bbox.xmax, y: bbox.ymax }),
+        _sw: this.windFormat.toScreen({ x: bbox.xmin, y: bbox.ymin }),
+        _nw: this.windFormat.toScreen({ x: bbox.xmin, y: bbox.ymax }),
+        _se: this.windFormat.toScreen({ x: bbox.xmax, y: bbox.ymin }),
       };
       let size = {
         n: this.calcScreenLength(position._ne, position._nw),
@@ -447,7 +433,7 @@ define([
     render: function (gl, matrix) {
       if (!this.windTexture) {
         this.resize();
-        // return
+        return
       }
       if (matrix) {
         this.matrix = matrix;

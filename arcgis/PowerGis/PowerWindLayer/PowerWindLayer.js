@@ -25,7 +25,7 @@ define([
         speedFactor: 0.9,
         particleDensity: 0.1,
       });
-      this.onLoad(this);
+      // this.onLoad(this);
       // pan-end zoom-end resize extent-change
       this.moveEndHandler = (e) => {
         this.setVisibility(true);
