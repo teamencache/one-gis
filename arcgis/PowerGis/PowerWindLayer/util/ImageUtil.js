@@ -3,15 +3,20 @@
  */
 define(["dojo/_base/declare"], function (declare) {
   return declare(null, {
-    constructor() {
+    constructor(option) {
       this.canvas = document.createElement("canvas");
       this.context2D = this.canvas.getContext("2d", {
-        willReadFrequently:true
+        willReadFrequently: true,
       });
       this.image = null; //初始图片
       this.bbox = null; //初始图片经纬度范围
       this.resolution = null; //初始图片像素对应经纬度大小
       this.rangeBbox = null; //当前范围
+      this.lastPixRange = null; // 上次的图片裁剪范围
+      Object.assign(this, option);
+      if (this.debug) {
+        console.log("ImageUtil");
+      }
     },
     // 设置原始图片与对应范围
     setSourceImage: function (image, bbox) {
@@ -42,7 +47,7 @@ define(["dojo/_base/declare"], function (declare) {
           imageData.data[index2 + 3] = data[index1 + 3];
         }
       }
-      this.toImage(imageData).then(image=>{
+      this.toImage(imageData).then((image) => {
         this.image = image;
         this.initResolution(bbox);
       });
@@ -77,7 +82,7 @@ define(["dojo/_base/declare"], function (declare) {
           newData.data[index2 + 3] = oldData.data[index1 + 3];
         }
       }
-      this.toImage(newData).then(image=>{
+      this.toImage(newData).then((image) => {
         this.image = image;
       });
     },
@@ -106,15 +111,32 @@ define(["dojo/_base/declare"], function (declare) {
      * @param {地图四角坐标} bbox2
      */
     resize(bbox2) {
-      let bbox = this.getCurrentBbox(this.bbox, bbox2);
-      if (!bbox) {
-        return;
+      let currentBbox = this.getCurrentBbox(this.bbox, bbox2);
+      let update = false;
+      if (!currentBbox) {
+        return update;
       }
-      let pixRange = this.getPixRange(bbox);
-      this.rangeBbox = this.fixBbox(pixRange);
-      this.canvas.width = pixRange.width;
-      this.canvas.height = pixRange.height;
-      this.cutImage(this.image, pixRange);
+      let pixRange = this.getPixRange(currentBbox);
+      let rangeBbox = this.fixBbox(pixRange);
+      let equals = this.equalsObject(pixRange, this.lastPixRange);
+      if (equals) {
+        let contains = this.containsBbox(rangeBbox, bbox2);
+        if (contains) {
+          // 地图范围超过了图片的分辨率
+          rangeBbox = bbox2;
+        }
+        update = contains;
+      } else {
+        update = true;
+      }
+      if (update) {
+        this.lastPixRange = pixRange;
+        this.rangeBbox = rangeBbox;
+        this.canvas.width = pixRange.width;
+        this.canvas.height = pixRange.height;
+        this.cutImage(this.image, pixRange);
+      }
+      return update;
     },
 
     /**
@@ -134,6 +156,47 @@ define(["dojo/_base/declare"], function (declare) {
         return bbox;
       }
     },
+
+    equalsObject(obj1, obj2) {
+      let equals = false;
+      if (obj1 && obj2) {
+        for (let key in obj2) {
+          equals = obj2[key] == obj1[key];
+          if (!equals) {
+            break;
+          }
+        }
+      }
+      return equals;
+    },
+
+    /**
+     * big 是否包含 small
+     * @param {bbox} big
+     * @param {bbox} small
+     * @returns
+     */
+    containsBbox(big, small) {
+      return (
+        big.xmin <= small.xmin &&
+        big.xmax >= small.xmax &&
+        big.ymin <= small.ymin &&
+        big.ymax >= small.ymax
+      );
+    },
+    // pixRange是否相同
+    equalsPixRange(pixRange, lastPixRange) {
+      let equals = false;
+      if (lastPixRange) {
+        for (let key in lastPixRange) {
+          equals = lastPixRange[key] == pixRange[key];
+          if (!equals) {
+            break;
+          }
+        }
+      }
+      return equals;
+    },
     /**
      * 图片裁剪范围
      * @param {Bounds} bbox 四角坐标相交范围
@@ -141,9 +204,9 @@ define(["dojo/_base/declare"], function (declare) {
      */
     getPixRange(bbox) {
       let pixRange = {
-        x: Math.ceil((bbox.xmin - this.bbox.xmin) / this.resolution.x),
+        x: Math.floor((bbox.xmin - this.bbox.xmin) / this.resolution.x),
         y: Math.floor(-(bbox.ymax - this.bbox.ymax) / this.resolution.y),
-        x2: Math.floor((bbox.xmax - this.bbox.xmin) / this.resolution.x),
+        x2: Math.ceil((bbox.xmax - this.bbox.xmin) / this.resolution.x),
         y2: Math.ceil(-(bbox.ymin - this.bbox.ymax) / this.resolution.y),
         width: 0,
         height: 0,
@@ -193,15 +256,15 @@ define(["dojo/_base/declare"], function (declare) {
     // 生成图片
     toImage(imageData) {
       this.context2D.putImageData(imageData, 0, 0);
-      return new Promise(resolve=>{
+      return new Promise((resolve) => {
         let image = new Image();
-        image.onload = function(){
+        image.onload = function () {
           resolve(image);
-        }
+        };
         image.width = this.canvas.width;
         image.height = this.canvas.height;
         image.src = this.canvas.toDataURL();
-      })
+      });
     },
     getImageData() {
       return this.context2D.getImageData(
